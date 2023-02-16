@@ -43,7 +43,8 @@ def main(config_file):
 
     set_seed(config["random_seed"])
 
-    device = torch.device("cuda") if torch.cuda.is_available else "cpu"
+    if config['try_cuda']:
+        device = torch.device("cuda") if torch.cuda.is_available else "cpu"
 
     model_name = config["model_name"]
     model = AutoModelForCausalLM.from_pretrained(model_name, use_cache=False).to(device)
@@ -106,7 +107,7 @@ def main(config_file):
         print("Model freezeds")
 
     wandb.login()
-    run = wandb.init(project="QA specific domain", entity="myashka")
+    run = wandb.init(project=config['wandb_project'], entity="myashka")
 
     os.environ["WANDB_LOG_MODEL"] = "true"
     os.environ["WANDB_WATCH"] = "all"

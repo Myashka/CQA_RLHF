@@ -1,4 +1,6 @@
 random_seed: 42
+try_cuda: True
+wandb_project: CQA_RLHF
 model_name: EleutherAI/gpt-neo-1.3B
 data:
   file_path: file_path
@@ -13,8 +15,8 @@ train:
   eval_batch_size: 1
   gradient_accumulation_steps: 1
   warmup_steps: 100
-  eval_steps: 15
-  save_steps: 45
+  eval_steps: 500
+  save_steps: 1000
   logging_steps: 10
   wandb_run_name: text
   ds_config_file: ds_path

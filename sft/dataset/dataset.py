@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from datasets import Dataset
+from torch.utils.data import Dataset
 import json
 
 
