@@ -43,7 +43,7 @@ def main(config_file):
 
     set_seed(config["random_seed"])
 
-    if config['try_cuda']:
+    if config["try_cuda"]:
         device = torch.device("cuda") if torch.cuda.is_available else "cpu"
 
     model_name = config["model_name"]
@@ -107,11 +107,15 @@ def main(config_file):
         print("Model freezeds")
 
     wandb.login()
-    run = wandb.init(project=config['wandb_project'], entity="myashka")
+    run = wandb.init(
+        project=config["wandb_project"],
+        entity="myashka",
+        config=config,
+        job_type="train",
+        group="sft",
+    )
 
     os.environ["WANDB_LOG_MODEL"] = "true"
-    os.environ["WANDB_WATCH"] = "all"
-    os.environ["WANDB_SILENT"] = "true"
 
     training_args = TrainingArguments(
         output_dir=output_dir,

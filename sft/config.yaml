@@ -8,7 +8,7 @@ data:
   zero_question: null
 train:
   do_freeze: True
-  checkpoint_dir: /kaggle/working/CQA_RLHF/sft/checkpoints
+  checkpoint_dir: /kaggle/working/checkpoints
   num_epochs: 3
   learning_rate: 5.e-5
   train_batch_size: 4
