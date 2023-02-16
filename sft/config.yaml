@@ -1,0 +1,24 @@
+random_seed: 42
+model_name: EleutherAI/gpt-neo-1.3B
+data:
+  file_path: file_path
+  max_length: null
+  zero_question: null
+train:
+  do_freeze: True
+  checkpoint_dir: checkpoint_dir
+  num_epochs: 3
+  learning_rate: 5.e-5
+  train_batch_size: 4
+  eval_batch_size: 1
+  gradient_accumulation_steps: 1
+  warmup_steps: 100
+  eval_steps: 15
+  save_steps: 45
+  logging_steps: 10
+  wandb_run_name: text
+  ds_config_file: ds_path
+
+
+
+
