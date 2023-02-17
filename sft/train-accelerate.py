@@ -13,17 +13,14 @@ import random
 from warnings import filterwarnings
 import wandb
 
-
-def set_seed(seed_val=42):
-    random.seed(seed_val)
-    np.random.seed(seed_val)
-    torch.manual_seed(seed_val)
-    torch.cuda.manual_seed_all(seed_val)
-
+from accelerate import Accelerator
+from accelerate.utils import set_seed, find_executable_batch_size
 
 @click.command()
 @click.option("--config_file", default="config.yaml", help="Path to config YAML file")
 def main(config_file):
+    accelerator = Accelerator()
+    
     with open("config.yaml", "r") as f:
         config = yaml.load(f, Loader=CLoader)
 

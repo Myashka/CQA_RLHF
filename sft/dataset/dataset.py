@@ -68,3 +68,24 @@ class QADataset(Dataset):
             "attention_mask": tokenized_dict["attention_mask"][0],
             "labels": labels[0],
         }
+
+
+def prepare_datasets(
+    data_file_path,
+    tokenizer,
+    splits: list[str],
+    max_length=None,
+    zero_question_labels=True,
+):
+    datasets = []
+    for split in splits:
+        datasets.append(
+            QADataset(
+                data_file_path,
+                tokenizer,
+                split=split,
+                max_length=max_length,
+                zero_question_labels=zero_question_labels,
+            )
+        )
+    return datasets
