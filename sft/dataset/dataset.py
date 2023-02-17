@@ -73,7 +73,7 @@ class QADataset(Dataset):
 def prepare_datasets(
     data_file_path,
     tokenizer,
-    splits: list[str],
+    splits,
     max_length=None,
     zero_question_labels=True,
 ):
