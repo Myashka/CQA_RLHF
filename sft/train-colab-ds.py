@@ -8,7 +8,6 @@ import torch
 import os
 from evaluate import load
 import numpy as np
-import click
 import random
 from warnings import filterwarnings
 import wandb
@@ -21,11 +20,34 @@ def set_seed(seed_val=42):
     torch.cuda.manual_seed_all(seed_val)
 
 
-@click.command()
-@click.option("--config_file", default="config.yaml", help="Path to config YAML file")
-def main(config_file):
-    with open("config.yaml", "r") as f:
-        config = yaml.load(f, Loader=CLoader)
+def main():
+
+    config = {
+        "random_seed": 42,
+        "try_cuda": True,
+        "wandb_project": "CQA_RLHF",
+        "model_name": r"EleutherAI/gpt-neo-1.3B",
+        "data": {
+            "file_path": r"/content/drive/MyDrive/Colab Notebooks/vkr_data/data/1.0-data-div-ans-sep.json",
+            "max_length": 512,
+            "zero_question": None,
+        },
+        "train": {
+            "do_freeze": True,
+            "checkpoint_dir": r"/content/drive/MyDrive/Colab Notebooks/vkr_data/checkpoints",
+            "num_epochs": 3,
+            "learning_rate": 1e-5,
+            "train_batch_size": 16,
+            "eval_batch_size": 8,
+            "gradient_accumulation_steps": 1,
+            "warmup_steps": 100,
+            "eval_steps": 500,
+            "save_steps": 1000,
+            "logging_steps": 50,
+            "wandb_run_name": "1.0-sft-freezed",
+            "ds_config_file": r"/content/ds-config.json",
+        },
+    }
 
     set_seed(config["random_seed"])
 
@@ -91,27 +113,23 @@ def main(config_file):
                     p.requires_grad = False
         print("Model freezeds")
 
-    wandb.login()
     run = wandb.init(
         project=config["wandb_project"],
         entity="myashka",
-        config=config,
         job_type="train",
         group="sft",
+        config=config,
     )
-
-    os.environ["WANDB_LOG_MODEL"] = "true"
-    os.environ["WANDB_DISABLED"] = "true"
 
     training_args = TrainingArguments(
         output_dir=config["train"]["checkpoint_dir"],
-        num_train_epochs=config["train"]["num_epochs"],
+        num_train_epochs=config["train"]["num_epoches"],
         learning_rate=config["train"]["learning_rate"],
         per_device_train_batch_size=config["train"]["train_batch_size"],
         per_device_eval_batch_size=config["train"]["eval_batch_size"],
         gradient_checkpointing=True,
         half_precision_backend=True,
-        fp16=False,
+        fp16=True,
         adam_beta1=0.9,
         adam_beta2=0.95,
         gradient_accumulation_steps=config["train"]["gradient_accumulation_steps"],
@@ -123,7 +141,7 @@ def main(config_file):
         load_best_model_at_end=True,
         logging_steps=config["train"]["logging_steps"],
         report_to="wandb",
-        run_name=config["train"]["wandb_run_name"],
+        run_name="pohuy",
         deepspeed=config["train"]["ds_config_file"],
     )
 
@@ -144,7 +162,6 @@ def main(config_file):
     )
     trainer.train()
     trainer.save_model(config["train"]["checkpoint_dir"])
-    wandb.finish()
 
 
 if __name__ == "__main__":
