@@ -99,12 +99,18 @@ def create_dataloaders(
     batch_sizes,
     max_length=512,
     zero_questions_labels=False,
+    all_max_length=None,
 ):
     datasets = prepare_datasets(
         data_file_path, tokenizer, spltis, max_length, zero_questions_labels
     )
 
     dataloaders = []
+
+    if all_max_length:
+        same_max_length = max_length
+    else:
+        same_max_length = None
     for dataset, batch_size in zip(datasets, batch_sizes):
         dataloaders.append(
             DataLoader(
@@ -113,12 +119,21 @@ def create_dataloaders(
                 batch_size=batch_size,
                 collate_fn=lambda data: {
                     "input_ids": collate_batch(
-                        [f["input_ids"] for f in data], tokenizer
+                        [f["input_ids"] for f in data],
+                        tokenizer,
+                        max_length=same_max_length,
                     ),
                     "attention_mask": collate_batch(
-                        [f["attention_mask"] for f in data], tokenizer, "attention_mask"
+                        [f["attention_mask"] for f in data],
+                        tokenizer,
+                        "attention_mask",
+                        max_length=same_max_length,
                     ),
-                    "labels": collate_batch([f["labels"] for f in data], tokenizer),
+                    "labels": collate_batch(
+                        [f["labels"] for f in data],
+                        tokenizer,
+                        max_length=same_max_length,
+                    ),
                 },
             )
         )
