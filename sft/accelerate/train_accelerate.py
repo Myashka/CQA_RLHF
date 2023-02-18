@@ -6,6 +6,7 @@ from dataset import create_dataloaders
 from accelerate_trainer import Trainer
 from accelerate import Accelerator
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import wandb
 
 
 def main():
@@ -72,6 +73,8 @@ def main():
         "wandb_kwargs": {"entity": "myashka", "job_type": "train", "group": "sft"},
         'TPU': False,
     }
+
+    wandb.login()
 
     accelerator = Accelerator(
         mixed_precision=args.mixed_precision,

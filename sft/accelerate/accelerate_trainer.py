@@ -117,21 +117,21 @@ class Trainer:
             disable=not self.accelerator.is_main_process,
         )
         while self.global_step < self.max_steps:
-            batch = next(self.train_loader)
-            with self.accelerator.accumulate(self.model):
-                outputs = self.train_step(batch)
-                loss = outputs.loss
-                self.accelerator.backward(loss)
-                if self.max_grad_norm:
-                    self.accelerator.clip_grad_norm_(
-                        self.model.parameters(), self.max_grad_norm
-                    )
-
-                self.optimizer.step()
-                if not self.accelerator.optimizer_step_was_skipped:
-                    self.scheduler.step()
-
+            with self.accelerate.accumulate(self.model):
                 self.optimizer.zero_grad()
+                batch = next(self.train_loader)
+                with self.accelerator.accumulate(self.model):
+                    outputs = self.train_step(batch)
+                    loss = outputs.loss
+                    self.accelerator.backward(loss)
+                    if self.max_grad_norm and self.accelerator.sync_gradients:
+                        self.accelerator.clip_grad_norm_(
+                            self.model.parameters(), self.max_grad_norm
+                        )
+
+                    self.optimizer.step()
+                    if not self.accelerator.optimizer_step_was_skipped:
+                        self.scheduler.step()
 
             # Log Train Loss + Learning Rate + Global Step
             self.accelerator.log({"train_loss": loss.item()}, step=self.global_step)
