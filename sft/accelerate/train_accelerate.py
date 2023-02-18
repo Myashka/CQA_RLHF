@@ -7,6 +7,8 @@ from accelerate_trainer import Trainer
 from accelerate import Accelerator
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import wandb
+import yaml
+from yaml import CLoader
 
 
 def main():
@@ -60,65 +62,69 @@ def main():
         help="File with DeepSpeed config file.",
     )
 
+    parser.add_argument(
+        "--config_file",
+        type=str,
+        default=None,
+        help="File with DeepSpeed config file.",
+    )
+
     args = parser.parse_args()
 
-    config = {
-        "seed": 42,
-        'batch_size': 8,
-        'max_legth': 512,
-        "learning_rate": 2e-5,
-        "max_steps": 195000,
-        "eval_every": 500,
-        "warmup_steps": 100,
-        "wandb_kwargs": {"entity": "myashka", "job_type": "train", "group": "sft"},
-        'TPU': False,
-    }
-
-    wandb.login()
+    with open(args.config_file, "r") as f:
+        config = yaml.load(f, Loader=CLoader)
 
     accelerator = Accelerator(
         mixed_precision=args.mixed_precision,
         log_with=args.log_with,
         logging_dir=args.output_dir,
-        gradient_accumulation_steps=args.gradient_accumulation_steps,
         cpu=args.cpu,
         deepspeed_plugin=args.deepsped_config,
-        downcast_bf16=True if config['TPU'] else False,
-    )
-    trainer = Trainer(
-        max_steps=config["max_steps"],
-        eval_every=config["eval_every"],
-        learning_rate=config["learning_rate"],
-        warmup_steps=config["warmup_steps"],
-        gradient_accumulation_steps=args.gradient_accumulation_steps,
-        seed=config["seed"],
-        log_with=args.log_with,  # None, 'all', 'tensorboard', 'wandb', 'comet_ml'
-        output_dir=args.output_dir,
-        max_grad_norm=None,
-        tracker_init_kwargs=config['wandb_kwargs'],
-        cpu=args.cpu,
-        resume_from_checkpoint=args.resume_from_checkpoint,
-        accelerator=accelerator
+        # downcast_bf16=True if config['TPU'] else False,
     )
 
-    model_name = config["model_name"]
-    model = AutoModelForCausalLM.from_pretrained(model_name, use_cache=False)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    accelerator.wait_for_everyone()
 
-    model.resize_token_embeddings(len(tokenizer))
-    tokenizer.pad_token = tokenizer.eos_token
-    model.config.end_token_id = tokenizer.eos_token_id
-    model.config.pad_token_id = model.config.eos_token_id
-    model.pad_token_id = tokenizer.eos_token_id
+    if accelerator.is_main_process:
+        wandb.login()
+        model_name = config["model_name"]
+        model = AutoModelForCausalLM.from_pretrained(model_name, use_cache=False)
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-    train_loader, val_loader = create_dataloaders(args.data_path,
-                                                  tokenizer,
-                                                  spltis=['train', 'val'],
-                                                  batch_sizes=[config['batch_size'], config['batch_size']],
-                                                  max_length=config['max_length'],
-                                                  all_max_length=config['TPU'])
+        model.resize_token_embeddings(len(tokenizer))
+        tokenizer.pad_token = tokenizer.eos_token
+        model.config.end_token_id = tokenizer.eos_token_id
+        model.config.pad_token_id = model.config.eos_token_id
+        model.pad_token_id = tokenizer.eos_token_id
 
+        train_loader, val_loader = create_dataloaders(
+            args.data_path,
+            tokenizer,
+            spltis=["train", "val"],
+            batch_sizes=[config["batch_size"], config["batch_size"]],
+            max_length=config["max_length"],
+            all_max_length=config["TPU"],
+        )
+
+        trainer = Trainer(
+            max_steps=config["max_steps"],
+            eval_every=config["eval_every"],
+            learning_rate=config["learning_rate"],
+            warmup_steps=config["warmup_steps"],
+            gradient_accumulation_steps=config["gradient_accumulation_steps"],
+            seed=config["seed"],
+            log_with=args.log_with,  # None, 'all', 'tensorboard', 'wandb', 'comet_ml'
+            output_dir=args.output_dir,
+            max_grad_norm=None,
+            tracker_init_kwargs=config["wandb_kwargs"],
+            cpu=args.cpu,
+            resume_from_checkpoint=args.resume_from_checkpoint,
+            accelerator=accelerator,
+        )
+
+    accelerator.wait_for_everyone()
     trainer.train(model, tokenizer, train_loader, val_loader)
+
 
 if __name__ == "main":
     main()
