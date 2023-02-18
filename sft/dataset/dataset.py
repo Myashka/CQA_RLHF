@@ -1,6 +1,7 @@
 import torch
 import numpy as np
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
+from data_utils import collate_batch
 import json
 
 
@@ -89,3 +90,37 @@ def prepare_datasets(
             )
         )
     return datasets
+
+
+def create_dataloaders(
+    data_file_path,
+    tokenizer,
+    spltis,
+    batch_sizes,
+    max_length=512,
+    zero_questions_labels=False,
+):
+    datasets = prepare_datasets(
+        data_file_path, tokenizer, spltis, max_length, zero_questions_labels
+    )
+
+    dataloaders = []
+    for dataset, batch_size in zip(datasets, batch_sizes):
+        dataloaders.append(
+            DataLoader(
+                dataset,
+                shuffle=True,
+                batch_size=batch_size,
+                collate_fn=lambda data: {
+                    "input_ids": collate_batch(
+                        [f["input_ids"] for f in data], tokenizer
+                    ),
+                    "attention_mask": collate_batch(
+                        [f["attention_mask"] for f in data], tokenizer, "attention_mask"
+                    ),
+                    "labels": collate_batch([f["labels"] for f in data], tokenizer),
+                },
+            )
+        )
+
+    return dataloaders
