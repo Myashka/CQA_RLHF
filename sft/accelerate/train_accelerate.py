@@ -115,7 +115,6 @@ def main():
         )
 
         trainer = Trainer(
-            max_steps=config["max_steps"],
             eval_every=config["eval_every"],
             learning_rate=config["learning_rate"],
             warmup_steps=config["warmup_steps"],
@@ -131,7 +130,7 @@ def main():
         )
 
     accelerator.wait_for_everyone()
-    trainer.train(model, tokenizer, train_loader, val_loader)
+    trainer.train(model, tokenizer, train_loader, val_loader, n_epoches=config['n_epoches'])
 
 
 if __name__ == "main":

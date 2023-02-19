@@ -16,7 +16,6 @@ from itertools import cycle
 class Trainer:
     def __init__(
         self,
-        max_steps=195000,
         eval_every=500,
         learning_rate=1e-5,
         warmup_steps=100,
@@ -31,7 +30,6 @@ class Trainer:
         accelerator=None,
         **kwargs,
     ):
-        self.max_steps = int(max_steps)
         self.eval_every = int(eval_every)
         self.learning_rate = float(learning_rate)
         self.warmup_steps = int(warmup_steps)
@@ -57,7 +55,6 @@ class Trainer:
         self.global_step = 0
 
         self.config = dict(
-            max_steps=self.max_steps,
             eval_every=self.eval_every,
             learning_rate=self.learning_rate,
             warmup_steps=self.warmup_steps,
@@ -74,11 +71,14 @@ class Trainer:
         self,
         model,
         tokenizer,
+        n_epoches,
         train_loader,
         val_loader=None,
         optimizer=None,
         scheduler=None,
     ):
+
+        self.max_steps = n_epoches * len(train_loader)
 
         self.model = model
         self.optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate)
@@ -138,12 +138,18 @@ class Trainer:
                         self.scheduler.step()
 
             # Log Train Loss + Learning Rate + Global Step
-            self.accelerator.log({"train_loss": loss.item()}, step=self.global_step)
+            self.accelerator.log(
+                {"train_loss": loss.item()}, step=self.global_step
+            )
             self.accelerator.log(
                 {"lr": self.optimizer.param_groups[0]["lr"]}, step=self.global_step
             )
             self.accelerator.log(
                 {"global_step": self.global_step}, step=self.global_step
+            )
+            self.accelerator.log(
+                {"epoch": self.global_step / len(self.train_loader)},
+                step=self.global_step,
             )
 
             self.global_step += 1
@@ -186,7 +192,7 @@ class Trainer:
         return result_dict
 
     def evaluate(self, val_loader, tokenizer):
-        self.accelerator.print("Evaluating...")
+        self.accelerator.print("\nEvaluating...")
         total_loss = 0
         all_predictions = []
         all_labels = []
@@ -208,7 +214,12 @@ class Trainer:
             tokenizer, predictions=all_predictions, references=all_labels
         )
 
-        self.accelerator.log({"val_loss": total_loss.item()}, step=self.global_step)
+        self.accelerator.log(
+            {"val_loss": total_loss.item()}, step=self.global_step
+        )
+        self.accelerator.log(
+            {"epoch": self.global_step / len(self.train_loader)}, step=self.global_step
+        )
         self.accelerator.log(
             {
                 "bleu": eval_metric["bleu"],
