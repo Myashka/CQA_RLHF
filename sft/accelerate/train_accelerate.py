@@ -88,7 +88,7 @@ def main():
     if accelerator.is_main_process:
         wandb.login()
         model_name = config["model_name"]
-        model = AutoModelForCausalLM.from_pretrained(model_name, use_cache=False)
+        model = AutoModelForCausalLM.from_pretrained(model_name, use_cache=config['use_cache'])
         tokenizer = AutoTokenizer.from_pretrained(model_name)
 
         model.resize_token_embeddings(len(tokenizer))
@@ -96,6 +96,14 @@ def main():
         model.config.end_token_id = tokenizer.eos_token_id
         model.config.pad_token_id = model.config.eos_token_id
         model.pad_token_id = tokenizer.eos_token_id
+
+        if config["freeze"]:
+            for n, p in model.named_parameters():
+                if "transformer.h" in n:
+                    layer_num = int(n.split(".")[2])
+                    if "ln_" not in n and layer_num > 0 and layer_num < 23:
+                        p.requires_grad = False
+            accelerator.print("Model freezeds")
 
         train_loader, val_loader = create_dataloaders(
             args.data_path,

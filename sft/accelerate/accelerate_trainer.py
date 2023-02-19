@@ -31,12 +31,12 @@ class Trainer:
         accelerator=None,
         **kwargs,
     ):
-        self.max_steps = max_steps
-        self.eval_every = eval_every
-        self.learning_rate = learning_rate
-        self.warmup_steps = warmup_steps
-        self.gradient_accumulation_steps = gradient_accumulation_steps
-        self.seed = seed
+        self.max_steps = int(max_steps)
+        self.eval_every = int(eval_every)
+        self.learning_rate = float(learning_rate)
+        self.warmup_steps = int(warmup_steps)
+        self.gradient_accumulation_steps = int(gradient_accumulation_steps)
+        self.seed = int(seed)
         self.log_with = log_with
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True, parents=True)
@@ -61,7 +61,7 @@ class Trainer:
             eval_every=self.eval_every,
             learning_rate=self.learning_rate,
             warmup_steps=self.warmup_steps,
-            gradient_accumulation_steps=self.gradient_accumulation_steps,
+            gradient_accumulation_steps=int(self.gradient_accumulation_steps),
             seed=self.seed,
             max_grad_norm=self.max_grad_norm,
         )
@@ -81,13 +81,17 @@ class Trainer:
     ):
 
         self.model = model
-        self.optimizer = optimizer or torch.optim.AdamW(
-            model.parameters(), lr=self.learning_rate
-        )
-        self.scheduler = scheduler or get_linear_schedule_with_warmup(
-            optimizer=optimizer,
-            num_warmup_steps=self.warmup_steps,
-            num_training_steps=self.max_steps // self.gradient_accumulation_steps,
+        self.optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate)
+        # self.scheduler = scheduler or get_linear_schedule_with_warmup(
+        #     optimizer=optimizer,
+        #     num_warmup_steps=int(self.warmup_steps),
+        #     num_training_steps=int(self.max_steps)
+        #     // int(self.gradient_accumulation_steps),
+        # )
+        self.scheduler = get_linear_schedule_with_warmup(
+            optimizer=self.optimizer,
+            num_warmup_steps=self.max_steps,
+            num_training_steps=(self.max_steps) // self.gradient_accumulation_steps,
         )
 
         if self.resume_from_checkpoint:
@@ -97,10 +101,10 @@ class Trainer:
             self.model,
             self.optimizer,
             self.scheduler,
-            self.train_loaderself,
+            self.train_loader,
             self.val_loader,
         ) = self.accelerator.prepare(
-            model, optimizer, scheduler, train_loader, val_loader
+            model, self.optimizer, self.scheduler, train_loader, val_loader
         )
 
         if self.accelerator.is_main_process:
@@ -113,11 +117,11 @@ class Trainer:
         self.train_loader = cycle(self.train_loader)
         self.progress_bar = tqdm(
             initial=self.global_step,
-            total=self.max_steps,
+            total=int(self.max_steps),
             disable=not self.accelerator.is_main_process,
         )
         while self.global_step < self.max_steps:
-            with self.accelerate.accumulate(self.model):
+            with self.accelerator.accumulate(self.model):
                 self.optimizer.zero_grad()
                 batch = next(self.train_loader)
                 with self.accelerator.accumulate(self.model):
