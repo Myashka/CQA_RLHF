@@ -85,7 +85,7 @@ def main():
 
     accelerator.wait_for_everyone()
 
-    if accelerator.is_main_process:
+    with accelerator.main_process_first():
         wandb.login()
         model_name = config["model_name"]
         model = AutoModelForCausalLM.from_pretrained(model_name, use_cache=config['use_cache'])
@@ -108,7 +108,7 @@ def main():
         train_loader, val_loader = create_dataloaders(
             args.data_path,
             tokenizer,
-            spltis=["train", "val"],
+            splits=["train", "val"],
             batch_sizes=[config["batch_size"], config["batch_size"]],
             max_length=config["max_length"],
             all_max_length=config["TPU"],
@@ -129,8 +129,8 @@ def main():
             accelerator=accelerator,
         )
 
-    accelerator.wait_for_everyone()
-    trainer.train(model, tokenizer, train_loader, val_loader, n_epoches=config['n_epoches'])
+        n_epoches=int(config['n_epoches'])
+    trainer.train(model, tokenizer, n_epoches, train_loader, val_loader)
 
 
 if __name__ == "main":
