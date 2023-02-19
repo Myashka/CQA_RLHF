@@ -95,14 +95,14 @@ def prepare_datasets(
 def create_dataloaders(
     data_file_path,
     tokenizer,
-    spltis,
+    splits,
     batch_sizes,
     max_length=512,
     zero_questions_labels=False,
     all_max_length=None,
 ):
     datasets = prepare_datasets(
-        data_file_path, tokenizer, spltis, max_length, zero_questions_labels
+        data_file_path, tokenizer, splits, max_length, zero_questions_labels
     )
 
     dataloaders = []

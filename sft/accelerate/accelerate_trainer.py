@@ -207,8 +207,8 @@ class Trainer:
 
             total_loss += loss.float()
 
-        all_predictions = torch.cat(all_predictions)[: len(val_loader) * len(batch)]
-        all_labels = torch.cat(all_labels)[: len(val_loader) * len(batch)]
+        all_predictions = torch.cat(all_predictions)[: int(len(val_loader) * len(batch['input_ids']))]
+        all_labels = torch.cat(all_labels)[: int(len(val_loader) * len(batch['input_ids']))]
 
         eval_metric = self.compute_metrics(
             tokenizer, predictions=all_predictions, references=all_labels
