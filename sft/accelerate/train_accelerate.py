@@ -26,12 +26,6 @@ def main():
         "--cpu", action="store_true", help="If passed, will train on the CPU."
     )
     parser.add_argument(
-        "--checkpointing_steps",
-        type=str,
-        default=None,
-        help="Whether the various states should be saved at the end of every n steps, or 'epoch' for each epoch.",
-    )
-    parser.add_argument(
         "--resume_from_checkpoint",
         type=str,
         default=None,
@@ -88,7 +82,9 @@ def main():
     with accelerator.main_process_first():
         wandb.login()
         model_name = config["model_name"]
-        model = AutoModelForCausalLM.from_pretrained(model_name, use_cache=config['use_cache'])
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name, use_cache=config["use_cache"]
+        )
         tokenizer = AutoTokenizer.from_pretrained(model_name)
 
         model.resize_token_embeddings(len(tokenizer))
@@ -129,7 +125,7 @@ def main():
             accelerator=accelerator,
         )
 
-        n_epoches=int(config['n_epoches'])
+        n_epoches = int(config["n_epoches"])
     trainer.train(model, tokenizer, n_epoches, train_loader, val_loader)
 
 
