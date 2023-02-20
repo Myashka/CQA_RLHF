@@ -68,8 +68,8 @@ class Trainer:
             seed=self.seed,
             max_grad_norm=self.max_grad_norm,
             max_length=max_length,
-            is_tpu = self.is_tpu,
-            batch_size = self.batch_size
+            is_tpu=self.is_tpu,
+            batch_size=self.batch_size,
         )
 
         self.rouge = load("rouge")
@@ -87,19 +87,22 @@ class Trainer:
         scheduler=None,
     ):
 
-        self.max_steps = int(n_epoches * len(train_loader) // self.gradient_accumulation_steps)
+        self.max_steps = int(
+            n_epoches * len(train_loader) // self.gradient_accumulation_steps
+        )
+        starting_epoch = 0
 
-        self.model = model
+        # self.model = model
         if (
             self.accelerator.state.deepspeed_plugin is None
             or "optimizer"
             not in self.accelerator.state.deepspeed_plugin.deepspeed_config
         ):
             self.optimizer = torch.optim.AdamW(
-                self.model.parameters(), lr=self.learning_rate
+                model.parameters(), lr=self.learning_rate
             )
         else:
-            self.optimizer = DummyOptim(self.model.parameters(), lr=self.learning_rate)
+            self.optimizer = DummyOptim(model.parameters(), lr=self.learning_rate)
 
         if (
             self.accelerator.state.deepspeed_plugin is None
@@ -119,10 +122,18 @@ class Trainer:
             )
 
         if self.resume_from_checkpoint:
-            self.load_checkpoint(self.resume_from_checkpoint)
+            _ = self.load_checkpoint(
+                self.resume_from_checkpoint,
+                model,
+                **{"load_optimizer_states": True, "load_lr_scheduler_states": True},
+            )
+
+            resume_step = self.global_step
+            starting_epoch = self.global_step // len(train_loader)
+            resume_step -= starting_epoch * len(train_loader)
 
         (
-            self.model,
+            model,
             self.optimizer,
             self.scheduler,
             self.train_loader,
@@ -138,59 +149,57 @@ class Trainer:
                 init_kwargs=self.tracker_init_kwargs or {},
             )
 
-        self.train_data_loader_length = len(self.train_loader)
-        self.train_loader = cycle(self.train_loader)
         self.progress_bar = tqdm(
             initial=self.global_step,
             total=int(self.max_steps),
             disable=not self.accelerator.is_main_process,
         )
-        while self.global_step < self.max_steps:
-            with self.accelerator.accumulate(self.model):
-                self.optimizer.zero_grad()
-                batch = next(self.train_loader)
-                with self.accelerator.accumulate(self.model):
-                    outputs = self.train_step(batch)
+        for epoch in range(starting_epoch, n_epoches):
+            for step, batch in enumerate(self.train_loader):
+                if self.resume_from_checkpoint and epoch == starting_epoch:
+                    if resume_step is not None and step < resume_step:
+                        self.global_step += 1
+                        continue
+                with self.accelerator.accumulate(model):
+                    self.optimizer.zero_grad()
+                    outputs = model(**batch)
                     loss = outputs.loss
                     self.accelerator.backward(loss)
                     if self.max_grad_norm and self.accelerator.sync_gradients:
                         self.accelerator.clip_grad_norm_(
-                            self.model.parameters(), self.max_grad_norm
+                            model.parameters(), self.max_grad_norm
                         )
 
                     self.optimizer.step()
                     if not self.accelerator.optimizer_step_was_skipped:
                         self.scheduler.step()
 
-            # Log Train Loss + Learning Rate + Global Step
-            self.accelerator.log({"train_loss": loss.item()}, step=self.global_step)
-            self.accelerator.log(
-                {"lr": self.optimizer.param_groups[0]["lr"]}, step=self.global_step
-            )
-            self.accelerator.log(
-                {"global_step": self.global_step}, step=self.global_step
-            )
-            self.accelerator.log(
-                {"epoch": self.global_step / self.train_data_loader_length},
-                step=self.global_step,
-            )
+                # Log Train Loss + Learning Rate + Global Step
+                self.accelerator.log({"train_loss": loss.item()}, step=self.global_step)
+                self.accelerator.log(
+                    {"lr": self.optimizer.param_groups[0]["lr"]}, step=self.global_step
+                )
+                self.accelerator.log(
+                    {"global_step": self.global_step}, step=self.global_step
+                )
+                self.accelerator.log(
+                    {"epoch": epoch},
+                    step=self.global_step,
+                )
 
-            self.global_step += 1
-            if self.accelerator.is_main_process:
-                self.progress_bar.update(1)
-                self.progress_bar.set_description(f"loss {loss.item():.4f}")
+                self.global_step += 1
+                if self.accelerator.is_main_process:
+                    self.progress_bar.update(1)
+                    self.progress_bar.set_description(f"loss {loss.item():.4f}")
 
-            if self.global_step % self.eval_every == 0:
-                self.model.eval()
-                self.evaluate(self.val_loader, tokenizer)
-                self.save_checkpoint()
-                self.model.train()
+                if self.global_step % self.eval_every == 0:
+                    model.eval()
+                    self.evaluate(model, self.val_loader, tokenizer, epoch)
+                    self.save_checkpoint(model, epoch)
+                    model.train()
 
-        self.save_checkpoint("last.ckpt")
+        self.save_checkpoint(model, epoch)
         self.accelerator.end_training()
-
-    def train_step(self, batch):
-        return self.model(**batch)
 
     def compute_metrics(self, tokenizer, predictions, references):
         labels_ids = references
@@ -214,23 +223,29 @@ class Trainer:
 
         return result_dict
 
-    def evaluate(self, val_loader, tokenizer):
+    def evaluate(self, model, val_loader, tokenizer, epoch):
         self.accelerator.print("\nEvaluating...")
-        total_loss = 0
+        losses = []
         all_predictions = []
         all_labels = []
 
         for batch in val_loader:
             with torch.no_grad():
-                output = self.val_step(batch)
-                loss = output.loss
-                predictions = output.logits.argmax(dim=-1)
-                all_predictions.append(self.accelerator.gather(predictions))
-                all_labels.append(self.accelerator.gather(batch["labels"]))
+                output = model(**batch)
 
-            total_loss += loss.float()
+            loss = output.loss
+            predictions = output.logits.argmax(dim=-1)
+            all_predictions.append(self.accelerator.gather(predictions))
+            all_labels.append(self.accelerator.gather(batch["labels"]))
 
-        self.accelerator.print("\nConcatenating predictions and labels...")
+            losses.append(
+                self.accelerator.gather_for_metrics(
+                    loss.repeat(len(batch["input_ids"]))
+                )
+            )
+
+        losses = torch.cat(losses)
+        self.accelerator.print("Concatenating predictions and labels...")
         all_predictions = torch.cat(all_predictions)[
             : int(len(val_loader) * len(batch["input_ids"]))
         ]
@@ -238,56 +253,85 @@ class Trainer:
             : int(len(val_loader) * len(batch["input_ids"]))
         ]
 
+        eval_loss = torch.mean(losses)
+        self.accelerator.log({"val_loss": eval_loss.item()}, step=self.global_step)
         eval_metric = self.compute_metrics(
             tokenizer, predictions=all_predictions, references=all_labels
         )
         self.accelerator.print(f"Metrics computed\n{eval_metric}")
 
-        self.accelerator.log({"val_loss": total_loss.item()}, step=self.global_step)
-        self.accelerator.log(
-            {"epoch": self.global_step / self.train_data_loader_length},
-            step=self.global_step,
-        )
         self.accelerator.log(
             {
                 "bleu": eval_metric["bleu"],
                 "bert_f1": eval_metric["bert_f1"],
                 "rouge1": eval_metric["rouge1"],
                 "rougeL": eval_metric["rougeL"],
+                "epoch": epoch,
             },
             step=self.global_step,
         )
         self.accelerator.print("Metrics loged")
 
-    def val_step(self, batch):
-        return self.model(**batch)
-
-    def save_checkpoint(self):
+    def save_checkpoint(self, model, epoch):
         self.accelerator.wait_for_everyone()
+        if self.accelerator.state.deepspeed_plugin is not None:
+            if self.accelerator.is_main_process:
+                ckpt_path = str(self.output_dir) + f"/step_{self.global_step}.ckpt"
+                checkpoint_state_dict = {
+                    "epoch": epoch,
+                    "last_global_step": self.global_step,
+                }
+                success = model.save_checkpoint(ckpt_path, epoch, checkpoint_state_dict)
+                self.accelerator.print(f"Saved checkpoint to: {ckpt_path}: {success}")
         if self.accelerator.is_main_process:
-            model = self.accelerator.unwrap_model(self.model)
-            ckpt_path = str(self.output_dir) + f"/step_{self.global_step}.ckpt"
-            save_obj = {
-                "model": model.state_dict(),
-                "global_step": self.global_step,
-                "optimizer": self.optimizer.state_dict(),
-                "scheduler": self.scheduler.state_dict(),
-            }
+            unwrapped_model = self.accelerator.unwrap_model(model)
             self.accelerator.save(save_obj, ckpt_path)
             self.accelerator.print(f"Saved checkpoint to: {ckpt_path}")
+        else:
+            if self.accelerator.is_main_process:
+                unwrapped_model = self.accelerator.unwrap_model(model)
+                ckpt_path = str(self.output_dir) + f"/step_{self.global_step}.ckpt"
+                save_obj = {
+                    "model": unwrapped_model.state_dict(),
+                    "global_step": self.global_step,
+                    "optimizer": self.optimizer.state_dict(),
+                    "scheduler": self.scheduler.state_dict(),
+                    "epoch": epoch,
+                }
+                self.accelerator.save(save_obj, ckpt_path)
+                self.accelerator.print(f"Saved checkpoint to: {ckpt_path}")
 
     def load_checkpoint(
-        self, ckpt_path, strict=True, model_only=False, resume_global_step=True
+        self,
+        ckpt_path,
+        model,
+        strict=True,
+        model_only=False,
+        resume_global_step=True,
+        **kwargs,
     ):
-        loaded_obj = torch.load(ckpt_path, map_location="cpu")
+        if self.accelerator.state.deepspeed_plugin is not None:
+            _, checkpoint_state_dict = model.load_checkpoint(ckpt_path, **kwargs)
+            epoch = checkpoint_state_dict["epoch"]
+            self.global_step = checkpoint_state_dict["last_global_step"]
 
-        self.model.load_state_dict(loaded_obj["model"], strict=strict)
+            del checkpoint_state_dict
+            self.accelerator.print(f"Loaded checkpoint {ckpt_path}")
+            return epoch
+        else:
+            loaded_obj = torch.load(ckpt_path, map_location="cpu")
 
-        if not model_only:
-            self.optimizer.load_state_dict(loaded_obj["optimizer"])
-            self.scheduler.load_state_dict(loaded_obj["scheduler"])
-            self.global_step = (
-                loaded_obj["global_step"] if resume_global_step else self.global_step
-            )
+            model.load_state_dict(loaded_obj["model"], strict=strict)
 
-        self.accelerator.print(f"Loaded checkpoint {ckpt_path}")
+            if not model_only:
+                self.optimizer.load_state_dict(loaded_obj["optimizer"])
+                self.scheduler.load_state_dict(loaded_obj["scheduler"])
+                self.global_step = (
+                    loaded_obj["global_step"]
+                    if resume_global_step
+                    else self.global_step
+                )
+                epoch = loaded_obj["epoch"]
+
+            self.accelerator.print(f"Loaded checkpoint {ckpt_path}")
+            return epoch
