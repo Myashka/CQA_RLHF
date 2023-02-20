@@ -80,7 +80,7 @@ def main():
     accelerator.wait_for_everyone()
 
     with accelerator.main_process_first():
-        wandb.login()
+        wandb.login(key=config['wandb_api'])
         model_name = config["model_name"]
         model = AutoModelForCausalLM.from_pretrained(
             model_name, use_cache=config["use_cache"]

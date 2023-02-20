@@ -28,6 +28,9 @@ class Trainer:
         cpu=False,
         resume_from_checkpoint=None,
         accelerator=None,
+        max_length=None,
+        tpu=None,
+        batch_size=None,
         **kwargs,
     ):
         self.eval_every = int(eval_every)
@@ -42,6 +45,9 @@ class Trainer:
         self.tracker_init_kwargs = tracker_init_kwargs
         self.cpu = cpu
         self.resume_from_checkpoint = resume_from_checkpoint
+        self.max_length = max_length
+        self.is_tpu = tpu
+        self.batch_size = batch_size
         self.__dict__.update(kwargs)
 
         self.accelerator = accelerator or Accelerator(
@@ -61,6 +67,9 @@ class Trainer:
             gradient_accumulation_steps=int(self.gradient_accumulation_steps),
             seed=self.seed,
             max_grad_norm=self.max_grad_norm,
+            max_length=max_length,
+            is_tpu = self.is_tpu,
+            batch_size = self.batch_size
         )
 
         self.rouge = load("rouge")

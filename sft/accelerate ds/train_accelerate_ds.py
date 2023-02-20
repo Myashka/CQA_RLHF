@@ -49,12 +49,6 @@ def main():
         default=".",
         help="Directory with JSON data file.",
     )
-    parser.add_argument(
-        "--deepsped_config",
-        type=str,
-        default=None,
-        help="File with DeepSpeed config file.",
-    )
 
     parser.add_argument(
         "--config_file",
@@ -79,7 +73,7 @@ def main():
     accelerator.wait_for_everyone()
 
     with accelerator.main_process_first():
-        wandb.login()
+        wandb.login(key=config['wandb_api'])
         model_name = config["model_name"]
         model = AutoModelForCausalLM.from_pretrained(
             model_name, use_cache=config["use_cache"]
@@ -122,6 +116,9 @@ def main():
             cpu=args.cpu,
             resume_from_checkpoint=args.resume_from_checkpoint,
             accelerator=accelerator,
+            max_length = config["max_length"],
+            tpu = config["TPU"],
+            batch_size = config["batch_size"],
         )
 
         n_epoches = int(config["n_epoches"])
