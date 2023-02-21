@@ -138,4 +138,4 @@ if __name__ == "main":
     args = parse_args()
     model_name = args.model_name
     model = AutoModelForCausalLM.from_pretrained(model_name, use_cache=args.use_cache)
-    main(model)
+    main(model, args)
