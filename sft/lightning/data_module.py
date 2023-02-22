@@ -1,10 +1,9 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
-import os
-
-os.path.append(r"D:\CQA_RLHF\sft\dataset")
-from dataset import dataset, data_utils
+import sys
+sys.path.append(r"D:\CQA_RLHF\sft\dataset")
+import dataset, data_utils
 
 
 class QADataModule(pl.LightningDataModule):

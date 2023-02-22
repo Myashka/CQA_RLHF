@@ -18,7 +18,7 @@ class LitLM(pl.LightningModule):
         do_freeze,
         use_cache,
         warmup_steps,
-        adam_epsilon,
+        adam_betas,
         weight_decay,
         batch_size = 8,
         *args,
@@ -116,10 +116,10 @@ class LitLM(pl.LightningModule):
                 "weight_decay": 0.0,
             },
         ]
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.AdamW(
             optimizer_grouped_parameters,
             lr=self.hparams.learning_rate,
-            eps=self.hparams.adam_epsilon,
+            betas=self.hparams.adam_betas,
         )
 
         lr_scheduler = get_linear_schedule_with_warmup(

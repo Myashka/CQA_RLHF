@@ -20,7 +20,7 @@ def main(config_file):
 
     pl.seed_everything(config["seed"])
 
-    wandb.init(key=config["wandb"]["api"])
+    wandb.login(key=config["wandb"]["api"])
     wandb_logger = WandbLogger(
         project=config["wandb"]["project_name"],
         log_model=True,
@@ -39,11 +39,11 @@ def main(config_file):
         config["model_params"]["do_freeze"],
         config["model_params"]["use_cache"],
         config["model_params"]["warmup_steps"],
-        config["model_params"]["adam_epsilon"],
+        config["model_params"]["adam_betas"],
         config["model_params"]["weight_decay"],
     )
 
-    checpoint_callback = ModelCheckpoint(
+    checkpoint_callback = ModelCheckpoint(
         every_n_train_steps=config["trainer"]["checkpoint"]["every_n_train_steps"],
         filename="gpt-neo-sft-{epoch:02d}-{global_step}",
         dirpath=config["trainer"]["checkpoint"]["dirpath"],
@@ -57,7 +57,7 @@ def main(config_file):
         accumulate_grad_batches=config["trainer"]["accumulate_grad_batches"],
         gradient_clip_val=config["trainer"]["gradient_clip_val"],
         default_root_dir=os.getcwd(),
-        checpoint_callback=checpoint_callback,
+        callbacks=[checkpoint_callback],
         val_check_interval=config["trainer"]["val_check_interval"],
         precision=config["trainer"]["precision"],
     )
