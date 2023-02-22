@@ -20,7 +20,7 @@ class LitLM(pl.LightningModule):
         warmup_steps,
         adam_betas,
         weight_decay,
-        batch_size = 8,
+        batch_size=8,
         *args,
         **kwargs
     ):
@@ -37,9 +37,10 @@ class LitLM(pl.LightningModule):
         self.model.config.pad_token_id = self.model.config.eos_token_id
         self.model.pad_token_id = self.tokenizer.eos_token_id
 
-        self.rouge = load("rouge")
-        self.bertscore = load("bertscore")
-        self.bleu = load("bleu")
+        if self.hparams.do_compute_metrics:
+            self.rouge = load("rouge")
+            self.bertscore = load("bertscore")
+            self.bleu = load("bleu")
 
         if do_freeze:
             for n, p in self.model.named_parameters():
@@ -88,13 +89,16 @@ class LitLM(pl.LightningModule):
 
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
-    def on_validation_epoch_end(self, outputs):
-        preds = torch.cat([x["preds"] for x in outputs]).detach()
-        labels = torch.cat([x["labels"] for x in outputs]).detach()
+    def validation_epoch_end(self, outputs):
+        if self.hparams.do_compute_metrics:
+            preds = torch.cat([x["preds"] for x in outputs]).detach()
+            labels = torch.cat([x["labels"] for x in outputs]).detach()
+            self.log_dict(
+                self.compute_metrics(predictions=preds, references=labels),
+                sync_dist=True,
+            )
         loss = torch.stack([x["loss"] for x in outputs]).mean()
-
         self.log("val/loss", loss, sync_dist=True)
-        self.log_dict(self.compute_metrics(predictions=preds, references=labels), sync_dist=True)
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]

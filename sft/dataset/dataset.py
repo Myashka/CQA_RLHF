@@ -58,7 +58,7 @@ class QADataset(Dataset):
         )
 
         if self.zero_question_labels:
-            question_len = len(self.tokenizer.encode(qa_pair["Question"])[0])
+            question_len = len(self.tokenizer.encode(qa_pair["Question"]))
             labels = tokenized_dict["input_ids"].clone()
             labels[-1][:question_len] = -100
         else:
@@ -76,7 +76,7 @@ def prepare_datasets(
     tokenizer,
     splits,
     max_length=None,
-    zero_question_labels=True,
+    zero_question_labels=False,
 ):
     datasets = []
     for split in splits:

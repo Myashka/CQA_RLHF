@@ -24,7 +24,7 @@ def main(config_file):
     wandb_logger = WandbLogger(
         project=config["wandb"]["project_name"],
         log_model=True,
-        **config["wandb"]["args"]
+        **config["wandb"]["args"],
     )
 
     dm = QADataModule(
@@ -34,13 +34,9 @@ def main(config_file):
         config["data"]["batch_size"],
     )
     llm = LitLM(
-        config["model_name"],
-        config["model_params"]["lr"],
-        config["model_params"]["do_freeze"],
-        config["model_params"]["use_cache"],
-        config["model_params"]["warmup_steps"],
-        config["model_params"]["adam_betas"],
-        config["model_params"]["weight_decay"],
+        model_name=config["model_name"],
+        batch_size=config["data"]["batch_size"],
+        **config["model_params"],
     )
 
     checkpoint_callback = ModelCheckpoint(
@@ -50,16 +46,9 @@ def main(config_file):
     )
 
     trainer = pl.Trainer(
-        auto_scale_batch_size=config["trainer"]["auto_scale_batch_size"],
-        accelerator=config["trainer"]["accelerator"],
-        max_epochs=config["trainer"]["max_epochs"],
-        logger=wandb_logger,
-        accumulate_grad_batches=config["trainer"]["accumulate_grad_batches"],
-        gradient_clip_val=config["trainer"]["gradient_clip_val"],
         default_root_dir=os.getcwd(),
         callbacks=[checkpoint_callback],
-        val_check_interval=config["trainer"]["val_check_interval"],
-        precision=config["trainer"]["precision"],
+        **config["trainer"]["params"],
     )
     trainer.fit(
         llm,
