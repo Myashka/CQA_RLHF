@@ -39,8 +39,9 @@ class LitLM(pl.LightningModule):
 
         if self.hparams.do_compute_metrics:
             self.rouge = load("rouge")
-            self.bertscore = load("bertscore")
             self.bleu = load("bleu")
+            if self.hparams.do_compute_bertscore:
+                self.bertscore = load("bertscore")
 
         if do_freeze:
             for n, p in self.model.named_parameters():
@@ -52,7 +53,14 @@ class LitLM(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop.
         output = self.model(**batch)
-        self.log("train/loss", output.loss, prog_bar=True, on_step=True, on_epoch=True)
+        self.log(
+            "train/loss",
+            output.loss,
+            prog_bar=True,
+            on_step=True,
+            on_epoch=True,
+            logger=True,
+        )
         return output.loss
 
     def compute_metrics(self, predictions, references):
@@ -62,18 +70,19 @@ class LitLM(pl.LightningModule):
         label_str = self.tokenizer.batch_decode(labels_ids, skip_special_tokens=True)
 
         result_dict = self.rouge.compute(predictions=pred_str, references=label_str)
-        bertscore_dict = self.bertscore.compute(
-            predictions=pred_str, references=label_str, lang="en"
-        )
         bleu_metric = self.bleu.compute(predictions=pred_str, references=label_str)[
             "bleu"
         ]
 
-        result_dict["bert_precision"] = np.mean(bertscore_dict["precision"])
-        result_dict["bert_recall"] = np.mean(bertscore_dict["recall"])
-        result_dict["bert_f1"] = np.mean(bertscore_dict["f1"])
-
         result_dict["bleu"] = bleu_metric
+
+        if self.hparams.do_compute_bertscore:
+            bertscore_dict = self.bertscore.compute(
+                predictions=pred_str, references=label_str, lang="en"
+            )
+            result_dict["bert_precision"] = np.mean(bertscore_dict["precision"])
+            result_dict["bert_recall"] = np.mean(bertscore_dict["recall"])
+            result_dict["bert_f1"] = np.mean(bertscore_dict["f1"])
 
         return result_dict
 
@@ -96,9 +105,10 @@ class LitLM(pl.LightningModule):
             self.log_dict(
                 self.compute_metrics(predictions=preds, references=labels),
                 sync_dist=True,
+                logger=True,
             )
         loss = torch.stack([x["loss"] for x in outputs]).mean()
-        self.log("val/loss", loss, sync_dist=True)
+        self.log("val/loss", loss, sync_dist=True, logger=True)
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]

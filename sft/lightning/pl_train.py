@@ -39,6 +39,8 @@ def main(config_file):
         **config["model_params"],
     )
 
+    wandb_logger.watch(llm)
+
     checkpoint_callback = ModelCheckpoint(
         every_n_train_steps=config["trainer"]["checkpoint"]["every_n_train_steps"],
         filename="gpt-neo-sft-{epoch:02d}-{global_step}",
@@ -50,6 +52,7 @@ def main(config_file):
         callbacks=[checkpoint_callback],
         **config["trainer"]["params"],
     )
+
     trainer.fit(
         llm,
         datamodule=dm,
