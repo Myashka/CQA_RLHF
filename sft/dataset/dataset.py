@@ -62,7 +62,7 @@ class QADataset(Dataset):
             labels = tokenized_dict["input_ids"].clone()
             labels[-1][:question_len] = -100
         else:
-            labels = tokenized_dict["input_ids"]
+            labels = tokenized_dict["input_ids"].clone()
 
         return {
             "input_ids": tokenized_dict["input_ids"][0],
