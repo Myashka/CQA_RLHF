@@ -36,10 +36,11 @@ def main(config_file):
     llm = LitLM(
         model_name=config["model_name"],
         batch_size=config["data"]["batch_size"],
+        max_length=config["data"]["max_length"],
         **config["model_params"],
     )
 
-    wandb_logger.watch(llm)
+    wandb_logger.watch(llm, log_graph=False)
 
     checkpoint_callback = ModelCheckpoint(
         every_n_train_steps=config["trainer"]["checkpoint"]["every_n_train_steps"],
@@ -48,6 +49,7 @@ def main(config_file):
     )
 
     trainer = pl.Trainer(
+        logger=wandb_logger,
         default_root_dir=os.getcwd(),
         callbacks=[checkpoint_callback],
         **config["trainer"]["params"],

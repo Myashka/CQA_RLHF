@@ -10,6 +10,8 @@ class QADataModule(pl.LightningDataModule):
         super().__init__()
         self.save_hyperparameters()
         self.pairs = []
+        self.tokenizer = AutoTokenizer.from_pretrained(self.hparams.model_name)
+        self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def prepare_data(self):
         self.tokenizer = AutoTokenizer.from_pretrained(self.hparams.model_name)
