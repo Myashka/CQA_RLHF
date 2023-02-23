@@ -13,10 +13,6 @@ class QADataModule(pl.LightningDataModule):
         self.tokenizer = AutoTokenizer.from_pretrained(self.hparams.model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-    def prepare_data(self):
-        self.tokenizer = AutoTokenizer.from_pretrained(self.hparams.model_name)
-        self.tokenizer.pad_token = self.tokenizer.eos_token
-
     def setup(self, stage: str):
         # Assign train/val datasets for use in dataloaders
         if stage == "fit":
@@ -65,7 +61,7 @@ class QADataModule(pl.LightningDataModule):
         return DataLoader(
             self.val_ds,
             batch_size=self.hparams.batch_size,
-            shuffle=True,
+            shuffle=False,
             collate_fn=lambda data: {
                 "input_ids": data_utils.collate_batch(
                     [f["input_ids"] for f in data],
@@ -90,7 +86,7 @@ class QADataModule(pl.LightningDataModule):
         return DataLoader(
             self.test_ds,
             batch_size=self.hparams.batch_size,
-            shuffle=True,
+            shuffle=False,
             collate_fn=lambda data: {
                 "input_ids": data_utils.collate_batch(
                     [f["input_ids"] for f in data],

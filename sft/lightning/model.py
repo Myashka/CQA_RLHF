@@ -43,10 +43,12 @@ class LitLM(pl.LightningModule):
 
         if self.hparams.do_compute_metrics:
             nltk.download("punkt")
-            self.rouge = ROUGEScore(lang="en", max_length=self.hparams.max_length)
+            self.rouge = ROUGEScore()
             self.bleu = SacreBLEUScore()
             if self.hparams.do_compute_bertscore:
-                self.bertscore = BERTScore()
+                self.bertscore = BERTScore(
+                    lang="en", max_length=self.hparams.max_length
+                )
 
         if do_freeze:
             for n, p in self.model.named_parameters():
@@ -59,7 +61,7 @@ class LitLM(pl.LightningModule):
         # training_step defines the train loop.
         output = self.model(**batch)
         self.log(
-            "train/loss",
+            "train_loss",
             output.loss,
             logger=True,
             on_step=True,
@@ -71,31 +73,49 @@ class LitLM(pl.LightningModule):
         # this is the test loop
         output = self.model(**batch)
         val_loss = output.loss
+        # self.log("val_loss", val_loss, on_step=False, on_epoch=True, sync_dist=True)
 
         preds = output.logits.argmax(dim=-1)
         labels = batch["labels"]
 
-        preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
-        labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+        # if self.hparams.do_compute_metrics:
+        #     preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
+        #     labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+        #     if self.hparams.do_compute_bertscore:
+        #         self.bertscore(preds, labels)
+        #         self.log_dict("val_bert_score", self.bertscore, on_step=False, on_epoch=True)
 
-        # self.log("val_loss", val_loss)
+        #     self.bleu(preds, labels)
+        #     self.log("val_bleu", self.bleu, on_step=False, on_epoch=True)
+
+        #     self.rouge(preds, labels)
+        #     self.log_dict("val_rouge", self.rouge, on_step=False, on_epoch=True)
 
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
     def validation_epoch_end(self, outputs):
+        val_loss = torch.stack([x['loss'] for x in outputs]).mean()
+
+        # pred = torch.stack([x['preds'] for x in outputs])
+        # target = torch.stack([x['labels'] for x in outputs])
+        pred = torch.cat([output['preds'] for output in outputs], dim=0)
+        labels = torch.cat([output['labels'] for output in outputs], dim=0)
+
+        preds = self.tokenizer.batch_decode(pred, skip_special_tokens=True)
+        labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+        
         if self.hparams.do_compute_metrics:
             if self.hparams.do_compute_bertscore:
-                self.bertscore(outputs["preds"], outputs["labels"])
-                self.log_dict("val/bert_score", self.bertscore)
+                self.bertscore(preds, labels)
+                self.log_dict("val_bert_score", self.bertscore)
 
-            self.bleu(outputs["preds"], outputs["labels"])
-            self.log("val/bleu", self.bleu)
+            self.bleu(preds, [labels])
+            self.log("val_bleu", self.bleu,  on_step=False, on_epoch=True)
 
-            self.rouge(outputs["preds"], outputs["labels"])
-            self.log("val/rouge", self.rouge)
+            self.rouge(preds, labels)
+            self.log_dict("val_rouge", self.rouge)
 
-        loss = outputs["loss"].mean()
-        self.log("val/loss", loss, logger=True, prog_bar=True, on_step=False, on_epoch=True)
+        self.log("val_loss", val_loss, logger=True, on_step=False, on_epoch=True)
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]

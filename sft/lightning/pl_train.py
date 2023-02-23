@@ -9,6 +9,7 @@ import click
 from model import LitLM
 from data_module import QADataModule
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
 
 @click.command()
