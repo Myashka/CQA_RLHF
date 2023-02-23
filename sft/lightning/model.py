@@ -8,7 +8,8 @@ from transformers import (
 )
 from torchmetrics.text.bert import BERTScore
 from torchmetrics.text.rouge import ROUGEScore
-from torchmetrics.functional import bleu_score
+from torchmetrics import SacreBLEUScore
+import nltk
 import numpy as np
 
 
@@ -41,8 +42,9 @@ class LitLM(pl.LightningModule):
         self.model.pad_token_id = self.tokenizer.eos_token_id
 
         if self.hparams.do_compute_metrics:
-            self.rouge = ROUGEScore()
-            self.bleu = bleu_score()
+            nltk.download("punkt")
+            self.rouge = ROUGEScore(lang="en", max_length=self.hparams.max_length)
+            self.bleu = SacreBLEUScore()
             if self.hparams.do_compute_bertscore:
                 self.bertscore = BERTScore()
 
@@ -60,40 +62,10 @@ class LitLM(pl.LightningModule):
             "train/loss",
             output.loss,
             logger=True,
+            on_step=True,
+            sync_dist=True,
         )
         return output.loss
-
-    def compute_metrics(self, predictions, references):
-        labels_ids = references
-        pred_ids = predictions
-        pred_str = self.tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
-        label_str = self.tokenizer.batch_decode(labels_ids, skip_special_tokens=True)
-
-        result_dict = dict()
-
-        rouge_dict = self.rouge(preds=pred_str, target=label_str)
-        bleu_metric = self.bleu(preds=pred_str, target=label_str)
-
-        result_dict["bleu"] = bleu_metric
-
-        if self.hparams.do_compute_bertscore:
-            bertscore_dict = self.bertscore(
-                preds=pred_str,
-                target=label_str,
-                lang="en",
-                max_length=self.hparams.max_length,
-            )
-            result_dict["bert_precision"] = np.mean(bertscore_dict["precision"])
-            result_dict["bert_recall"] = np.mean(bertscore_dict["recall"])
-            result_dict["bert_f1"] = np.mean(bertscore_dict["f1"])
-
-            result_dict["rouge1_fmeasure"] = rouge_dict["rouge1_fmeasure"]
-            result_dict["rouge2_fmeasure"] = rouge_dict["rouge2_fmeasure"]
-            result_dict["rougeL_fmeasure"] = rouge_dict["rougeL_fmeasure"]
-            result_dict["rougeL_recall"] = rouge_dict["rougeL_recall"]
-            result_dict["rougeL_precision"] = rouge_dict["rougeL_precision"]
-
-        return result_dict
 
     def validation_step(self, batch, batch_idx):
         # this is the test loop
@@ -103,20 +75,27 @@ class LitLM(pl.LightningModule):
         preds = output.logits.argmax(dim=-1)
         labels = batch["labels"]
 
+        preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
+        labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+
         # self.log("val_loss", val_loss)
 
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
     def validation_epoch_end(self, outputs):
         if self.hparams.do_compute_metrics:
-            preds = torch.cat([x["preds"] for x in outputs]).detach()
-            labels = torch.cat([x["labels"] for x in outputs]).detach()
-            self.log_dict(
-                self.compute_metrics(predictions=preds, references=labels),
-                logger=True,
-            )
-        loss = torch.stack([x["loss"] for x in outputs]).mean()
-        self.log("val/loss", loss, logger=True, prog_bar=True)
+            if self.hparams.do_compute_bertscore:
+                self.bertscore(outputs["preds"], outputs["labels"])
+                self.log_dict("val/bert_score", self.bertscore)
+
+            self.bleu(outputs["preds"], outputs["labels"])
+            self.log("val/bleu", self.bleu)
+
+            self.rouge(outputs["preds"], outputs["labels"])
+            self.log("val/rouge", self.rouge)
+
+        loss = outputs["loss"].mean()
+        self.log("val/loss", loss, logger=True, prog_bar=True, on_step=False, on_epoch=True)
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
