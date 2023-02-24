@@ -30,9 +30,7 @@ def main(config_file):
 
     dm = QADataModule(
         config["model_name"],
-        config["data"]["path_to_data"],
-        config["data"]["max_length"],
-        config["data"]["batch_size"],
+        **config["data"]
     )
     llm = LitLM(
         model_name=config["model_name"],
