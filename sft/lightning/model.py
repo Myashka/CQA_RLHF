@@ -94,28 +94,40 @@ class LitLM(pl.LightningModule):
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
     def validation_epoch_end(self, outputs):
-        val_loss = torch.stack([x['loss'] for x in outputs]).mean()
+        val_loss = torch.stack([x["loss"] for x in outputs]).mean()
+        self.log(
+            "val_loss",
+            val_loss,
+            logger=True,
+            on_step=False,
+            on_epoch=True,
+            sync_dist=True,
+        )
 
-        # pred = torch.stack([x['preds'] for x in outputs])
-        # target = torch.stack([x['labels'] for x in outputs])
-        pred = torch.cat([output['preds'] for output in outputs], dim=0)
-        labels = torch.cat([output['labels'] for output in outputs], dim=0)
-
-        preds = self.tokenizer.batch_decode(pred, skip_special_tokens=True)
-        labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
-        
         if self.hparams.do_compute_metrics:
+
+            pred = torch.cat([output["preds"] for output in outputs], dim=0)
+            labels = torch.cat([output["labels"] for output in outputs], dim=0)
+
+            preds = self.tokenizer.batch_decode(pred, skip_special_tokens=True)
+            labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+
             if self.hparams.do_compute_bertscore:
                 self.bertscore(preds, labels)
                 self.log_dict("val_bert_score", self.bertscore)
 
-            self.bleu(preds, [labels])
-            self.log("val_bleu", self.bleu,  on_step=False, on_epoch=True)
+            self.bleu.update(preds, [labels])
+            bleu = self.bleu.compute()
+            print(bleu)
+            self.log("val_bleu", bleu, on_step=False, on_epoch=True, sync_dist=True)
 
-            self.rouge(preds, labels)
-            self.log_dict("val_rouge", self.rouge)
+            # self.rouge.update(preds, labels)
+            # rouge = self.rouge.compute()
+            # print(rouge['rouge1_fmeasure'])
 
-        self.log("val_loss", val_loss, logger=True, on_step=False, on_epoch=True)
+            # self.log("val_rouge1_fmeasure", rouge['rouge1_fmeasure'], on_step=False, on_epoch=True, sync_dist=True)
+            # self.log("val_rouge2_fmeasure", rouge['rouge2_fmeasure'], on_step=False, on_epoch=True, sync_dist=True)
+            # self.log("val_rougeL_fmeasure", rouge['rougeL_fmeasure'], on_step=False, on_epoch=True, sync_dist=True)
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
