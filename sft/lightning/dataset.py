@@ -12,6 +12,7 @@ class QADataset(Dataset):
         tokenizer,
         split="train",
         max_length=None,
+        padding=False,
         zero_question_labels=False,
     ):
         self.pairs = []
@@ -22,6 +23,7 @@ class QADataset(Dataset):
         self.tokenizer = tokenizer
         self.zero_question_labels = zero_question_labels
         self.max_length = max_length
+        self.padding = padding
 
         if self.max_length is None:
 
@@ -54,6 +56,7 @@ class QADataset(Dataset):
             r"Question\n" + qa_pair["Question"] + r"\nAnswer:" + qa_pair["Answer"],
             truncation=True,
             max_length=self.max_length,
+            padding=self.padding,
             return_tensors="pt",
         )
 
@@ -76,6 +79,7 @@ def prepare_datasets(
     tokenizer,
     splits,
     max_length=None,
+    padding=False,
     zero_question_labels=False,
 ):
     datasets = []
@@ -86,6 +90,7 @@ def prepare_datasets(
                 tokenizer,
                 split=split,
                 max_length=max_length,
+                padding=padding,
                 zero_question_labels=zero_question_labels,
             )
         )
