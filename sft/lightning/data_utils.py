@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 
-def collate_batch(examples, tokenizer, input_type="input_ids", max_length=None):
+def collate_batch(examples, tokenizer, input_type="input_ids"):
 
     # Tensorize if necessary.
     if isinstance(examples[0], (list, tuple, np.ndarray)):
@@ -22,9 +22,6 @@ def collate_batch(examples, tokenizer, input_type="input_ids", max_length=None):
             "You are attempting to pad samples but the tokenizer you are using"
             f" ({tokenizer.__class__.__name__}) does not have a pad token."
         )
-
-    if max_length is None:
-        max_length = max(x.size(0) for x in examples)
 
     if input_type == "input_ids":
         result = examples[0].new_full(

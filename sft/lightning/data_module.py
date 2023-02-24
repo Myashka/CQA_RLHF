@@ -6,12 +6,18 @@ import dataset, data_utils
 
 
 class QADataModule(pl.LightningDataModule):
-    def __init__(self, model_name, data_dir, max_length, batch_size, *args, **kwargs):
+    def __init__(
+        self, model_name, data_dir, max_length, batch_size, pad_for_tpu, *args, **kwargs
+    ):
         super().__init__()
         self.save_hyperparameters()
         self.pairs = []
         self.tokenizer = AutoTokenizer.from_pretrained(self.hparams.model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
+        if pad_for_tpu:
+            self.padding = "max_length"
+        else:
+            self.padding = False
 
     def setup(self, stage: str):
         # Assign train/val datasets for use in dataloaders
@@ -20,6 +26,7 @@ class QADataModule(pl.LightningDataModule):
                 self.hparams.data_dir,
                 self.tokenizer,
                 max_length=self.hparams.max_length,
+                padding=self.padding,
                 splits=["train", "val"],
             )
 
@@ -29,6 +36,7 @@ class QADataModule(pl.LightningDataModule):
                 self.hparams.data_dir,
                 self.tokenizer,
                 max_length=self.hparams.max_length,
+                padding=self.padding,
                 splits=["test"],
             )
 
@@ -41,18 +49,15 @@ class QADataModule(pl.LightningDataModule):
                 "input_ids": data_utils.collate_batch(
                     [f["input_ids"] for f in data],
                     self.tokenizer,
-                    max_length=self.hparams.max_length,
                 ),
                 "attention_mask": data_utils.collate_batch(
                     [f["attention_mask"] for f in data],
                     self.tokenizer,
                     "attention_mask",
-                    max_length=self.hparams.max_length,
                 ),
                 "labels": data_utils.collate_batch(
                     [f["labels"] for f in data],
-                    self.tokenizer,
-                    max_length=self.hparams.max_length,
+                    self.tokenizer
                 ),
             },
         )
