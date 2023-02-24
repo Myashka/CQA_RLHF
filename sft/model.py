@@ -118,16 +118,14 @@ class LitLM(pl.LightningModule):
 
             self.bleu.update(preds, [labels])
             bleu = self.bleu.compute()
-            print(bleu)
             self.log("val_bleu", bleu, on_step=False, on_epoch=True, sync_dist=True)
 
-            # self.rouge.update(preds, labels)
-            # rouge = self.rouge.compute()
-            # print(rouge['rouge1_fmeasure'])
+            self.rouge.update(preds, labels)
+            rouge = self.rouge.compute()
 
-            # self.log("val_rouge1_fmeasure", rouge['rouge1_fmeasure'], on_step=False, on_epoch=True, sync_dist=True)
-            # self.log("val_rouge2_fmeasure", rouge['rouge2_fmeasure'], on_step=False, on_epoch=True, sync_dist=True)
-            # self.log("val_rougeL_fmeasure", rouge['rougeL_fmeasure'], on_step=False, on_epoch=True, sync_dist=True)
+            self.log("val_rouge1_fmeasure", rouge['rouge1_fmeasure'], on_step=False, on_epoch=True, sync_dist=True)
+            self.log("val_rouge2_fmeasure", rouge['rouge2_fmeasure'], on_step=False, on_epoch=True, sync_dist=True)
+            self.log("val_rougeL_fmeasure", rouge['rougeL_fmeasure'], on_step=False, on_epoch=True, sync_dist=True)
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
