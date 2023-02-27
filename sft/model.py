@@ -14,20 +14,7 @@ import numpy as np
 
 
 class LitLM(pl.LightningModule):
-    def __init__(
-        self,
-        model_name,
-        learning_rate,
-        do_freeze,
-        use_cache,
-        warmup_steps,
-        adam_betas,
-        weight_decay,
-        max_length,
-        batch_size=8,
-        *args,
-        **kwargs
-    ):
+    def __init__(self, model_name, use_cache, batch_size=8, *args, **kwargs):
         super().__init__()
         self.save_hyperparameters()
         self.model = AutoModelForCausalLM.from_pretrained(
@@ -50,7 +37,7 @@ class LitLM(pl.LightningModule):
                     lang="en", max_length=self.hparams.max_length
                 )
 
-        if do_freeze:
+        if self.hparams.do_freeze:
             for n, p in self.model.named_parameters():
                 if "transformer.h" in n:
                     layer_num = int(n.split(".")[2])
@@ -58,7 +45,6 @@ class LitLM(pl.LightningModule):
                         p.requires_grad = False
 
     def training_step(self, batch, batch_idx):
-        # training_step defines the train loop.
         output = self.model(**batch)
         self.log(
             "train_loss",
@@ -70,26 +56,11 @@ class LitLM(pl.LightningModule):
         return output.loss
 
     def validation_step(self, batch, batch_idx):
-        # this is the test loop
         output = self.model(**batch)
         val_loss = output.loss
-        # self.log("val_loss", val_loss, on_step=False, on_epoch=True, sync_dist=True)
 
         preds = output.logits.argmax(dim=-1)
         labels = batch["labels"]
-
-        # if self.hparams.do_compute_metrics:
-        #     preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
-        #     labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
-        #     if self.hparams.do_compute_bertscore:
-        #         self.bertscore(preds, labels)
-        #         self.log_dict("val_bert_score", self.bertscore, on_step=False, on_epoch=True)
-
-        #     self.bleu(preds, labels)
-        #     self.log("val_bleu", self.bleu, on_step=False, on_epoch=True)
-
-        #     self.rouge(preds, labels)
-        #     self.log_dict("val_rouge", self.rouge, on_step=False, on_epoch=True)
 
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
@@ -123,9 +94,27 @@ class LitLM(pl.LightningModule):
             self.rouge.update(preds, labels)
             rouge = self.rouge.compute()
 
-            self.log("val_rouge1_fmeasure", rouge['rouge1_fmeasure'], on_step=False, on_epoch=True, sync_dist=True)
-            self.log("val_rouge2_fmeasure", rouge['rouge2_fmeasure'], on_step=False, on_epoch=True, sync_dist=True)
-            self.log("val_rougeL_fmeasure", rouge['rougeL_fmeasure'], on_step=False, on_epoch=True, sync_dist=True)
+            self.log(
+                "val_rouge1_fmeasure",
+                rouge["rouge1_fmeasure"],
+                on_step=False,
+                on_epoch=True,
+                sync_dist=True,
+            )
+            self.log(
+                "val_rouge2_fmeasure",
+                rouge["rouge2_fmeasure"],
+                on_step=False,
+                on_epoch=True,
+                sync_dist=True,
+            )
+            self.log(
+                "val_rougeL_fmeasure",
+                rouge["rougeL_fmeasure"],
+                on_step=False,
+                on_epoch=True,
+                sync_dist=True,
+            )
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
@@ -159,3 +148,12 @@ class LitLM(pl.LightningModule):
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
         return [optimizer], [lr_scheduler]
+
+    def generate(self, text: str, device: torch.device = torch.device("cpu"), **kwargs):
+        inputs = self.tokenizer(text, return_tensors="pt")
+        inputs = inputs.to(device)
+        generated_tokens = self.model.generate(inputs["input_ids"], **kwargs)
+        generated_q_a = self.tokenizer.decode(
+            generated_tokens[0], skip_special_tokens=True
+        )
+        return generated_q_a

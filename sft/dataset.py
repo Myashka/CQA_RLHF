@@ -14,7 +14,9 @@ class QADataset(Dataset):
         max_length=None,
         padding=False,
         zero_question_labels=False,
+        train=True,
     ):
+        self.train = train
         self.pairs = []
         with open(file_name, "r") as f:
             data = json.load(f)
@@ -52,26 +54,29 @@ class QADataset(Dataset):
 
     def __getitem__(self, idx):
         qa_pair = self.pairs[idx]
-        tokenized_dict = self.tokenizer(
-            r"Question\n" + qa_pair["Question"] + r"\nAnswer:" + qa_pair["Answer"],
-            truncation=True,
-            max_length=self.max_length,
-            padding=self.padding,
-            return_tensors="pt",
-        )
-
-        if self.zero_question_labels:
-            question_len = len(self.tokenizer.encode(qa_pair["Question"]))
-            labels = tokenized_dict["input_ids"].clone()
-            labels[-1][:question_len] = -100
+        if not self.train:
+            return [r"Question\n" + qa_pair["Question"] + r"\nAnswer: ", qa_pair["Answer"]]
         else:
-            labels = tokenized_dict["input_ids"].clone()
+            tokenized_dict = self.tokenizer(
+                r"Question\n" + qa_pair["Question"] + r"\nAnswer: " + qa_pair["Answer"],
+                truncation=True,
+                max_length=self.max_length,
+                padding=self.padding,
+                return_tensors="pt",
+            )
 
-        return {
-            "input_ids": tokenized_dict["input_ids"][0],
-            "attention_mask": tokenized_dict["attention_mask"][0],
-            "labels": labels[0],
-        }
+            if self.zero_question_labels:
+                question_len = len(self.tokenizer.encode(qa_pair["Question"]))
+                labels = tokenized_dict["input_ids"].clone()
+                labels[-1][:question_len] = -100
+            else:
+                labels = tokenized_dict["input_ids"].clone()
+
+            return {
+                "input_ids": tokenized_dict["input_ids"][0],
+                "attention_mask": tokenized_dict["attention_mask"][0],
+                "labels": labels[0],
+            }
 
 
 def prepare_datasets(
@@ -81,6 +86,7 @@ def prepare_datasets(
     max_length=None,
     padding=False,
     zero_question_labels=False,
+    train=True,
 ):
     datasets = []
     for split in splits:
@@ -92,6 +98,7 @@ def prepare_datasets(
                 max_length=max_length,
                 padding=padding,
                 zero_question_labels=zero_question_labels,
+                train=train
             )
         )
     return datasets
