@@ -16,36 +16,39 @@ from pytorch_lightning.callbacks.progress import TQDMProgressBar
 @click.option("--config_file", default="config.yaml", help="Path to config YAML file")
 def main(config_file):
 
+    wandb.require("service")
+
     with open(config_file, "r") as f:
         config = yaml.load(f, Loader=CLoader)
 
     pl.seed_everything(config["seed"])
 
     wandb.login(key=config["wandb"]["api"])
-    wandb_logger = WandbLogger(
-        project=config["wandb"]["project_name"],
-        log_model=True,
-        **config["wandb"]["args"],
-    )
 
-    dm = QADataModule(
-        config["model_name"],
-        **config["data"]
-    )
+    dm = QADataModule(config["model_name"], **config["data"])
     llm = LitLM(
         model_name=config["model_name"],
         batch_size=config["data"]["batch_size"],
         max_length=config["data"]["max_length"],
         **config["model_params"],
     )
+    wandb_logger = WandbLogger(
+        project=config["wandb"]["project_name"],
+        log_model="all",
+        **config["wandb"]["args"],
+    )
 
     wandb_logger.watch(llm, log_graph=False)
-
     checkpoint_callback = ModelCheckpoint(
-        every_n_train_steps=config["trainer"]["checkpoint"]["every_n_train_steps"],
-        filename="gpt-neo-sft-{epoch:02d}-{global_step}",
-        dirpath=config["trainer"]["checkpoint"]["dirpath"],
+        monitor="val_loss",
+        mode="min",
+        filename="gpt-neo-sft-{epoch:02d}-{val_loss}",
     )
+    # checkpoint_callback = ModelCheckpoint(
+    #     every_n_train_steps=config["trainer"]["checkpoint"]["every_n_train_steps"],
+    #     filename="gpt-neo-sft-{epoch:02d}-{global_step}",
+    #     dirpath=config["trainer"]["checkpoint"]["dirpath"],
+    # )
 
     trainer = pl.Trainer(
         logger=wandb_logger,
