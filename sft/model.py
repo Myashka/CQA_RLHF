@@ -149,7 +149,7 @@ class LitLM(pl.LightningModule):
         )
         return [optimizer], [lr_scheduler]
 
-    def generate(self, text: str, device: torch.device = torch.device("cpu"), **kwargs):
+    def generate(self, text: str, device, **kwargs):
         inputs = self.tokenizer(text, return_tensors="pt")
         inputs = inputs.to(device)
         generated_tokens = self.model.generate(inputs["input_ids"], **kwargs)
