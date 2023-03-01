@@ -33,12 +33,6 @@ def main(config_file):
 
     wandb.login(key=config["wandb"]["api"])
 
-    wandb_logger = WandbLogger(
-        project=config["wandb"]["project_name"],
-        log_model=True,
-        **config["wandb"]["args"],
-    )
-
     if config["test_model_path"] is not None:
         model = LitLM.load_from_checkpoint(config["test_model_path"]).to(device)
         if config["model_params"]["use_cache"]:
@@ -47,7 +41,14 @@ def main(config_file):
         model = LitLM(
             model_name=config["model_name"],
             **config["model_params"],
+            **config['test_params']
         ).to(device)
+
+    wandb_logger = WandbLogger(
+        project=config["wandb"]["project_name"],
+        log_model=True,
+        **config["wandb"]["args"],
+    )
 
     wandb_logger.watch(model, log_graph=False)
 
@@ -57,14 +58,14 @@ def main(config_file):
 
     columns = ["question", "original_answer", "generated_answer"]
 
-    if config["do_compute_metrics"]:
+    if config['test_params']["do_compute_metrics"]:
         rouge = ROUGEScore()
         bleu = SacreBLEUScore()
         columns.append("bleu")
         columns.append("rouge1_fmeasure")
         columns.append("rouge2_fmeasure")
         columns.append("rougeL_fmeasure")
-        if config["do_compute_bertscore"]:
+        if config['test_params']["do_compute_bertscore"]:
             bertscore = BERTScore(lang="en")
             columns.append("bert_f1")
             columns.append("bert_precision")
@@ -84,7 +85,7 @@ def main(config_file):
         test_sample.append(answer)
         test_sample.append(gen_answer)
 
-        if config["do_compute_metrics"]:
+        if config['test_params']["do_compute_metrics"]:
 
             rouge_score = rouge(gen_answer, answer)
             bleu_score = bleu(gen_answer, [answer])
@@ -95,7 +96,7 @@ def main(config_file):
             test_sample.append(rouge_score["rouge2_fmeasure"])
             test_sample.append(rouge_score["rougeL_fmeasure"])
 
-            if config["do_compute_bertscore"]:
+            if config['test_params']["do_compute_bertscore"]:
                 bert_score = bertscore(gen_answer, answer)
                 test_sample.append(bert_score["f1"])
                 test_sample.append(bert_score["precision"])
