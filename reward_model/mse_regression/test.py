@@ -59,7 +59,7 @@ def main(config_file):
         test_sample = []
         model_output = model(**sample)
 
-        test_sample.append(model.tokenizer.decode(sample['input_ids']))
+        test_sample.append(model.tokenizer.batch_decode(sample['input_ids'], skip_special_tokens=True)[0])
         test_sample.append(sample['labels'])
         test_sample.append(model_output.logits)
         test_sample.append(model_output.loss)
