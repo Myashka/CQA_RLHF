@@ -150,10 +150,12 @@ class LitLM(pl.LightningModule):
         return [optimizer], [lr_scheduler]
 
     def generate(self, text: str, device, **kwargs):
-        inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+        inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=512)['input_ids']
+        answer_promt = self.tokenizer(r"\nAnswer: ", return_tensors="pt")['input_ids']
+        inputs = inputs+answer_promt
         inputs = inputs.to(device)
-        generated_tokens = self.model.generate(inputs["input_ids"], **kwargs)
+        generated_tokens = self.model.generate(inputs, **kwargs)
         generated_q_a = self.tokenizer.decode(
-            generated_tokens, skip_special_tokens=True
+            generated_tokens[0], skip_special_tokens=True
         )
         return generated_q_a

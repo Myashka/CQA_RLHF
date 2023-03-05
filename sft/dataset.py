@@ -55,7 +55,7 @@ class QADataset(Dataset):
     def __getitem__(self, idx):
         qa_pair = self.pairs[idx]
         if not self.train:
-            return r"Question\n" + qa_pair["Question"] + r"\nAnswer: ", qa_pair["Answer"]
+            return r"Question\n" + qa_pair["Question"], qa_pair["Answer"]
         else:
             tokenized_dict = self.tokenizer(
                 r"Question\n" + qa_pair["Question"] + r"\nAnswer: " + qa_pair["Answer"],
