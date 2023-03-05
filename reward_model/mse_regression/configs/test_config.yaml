@@ -1,0 +1,27 @@
+seed: 42
+cuda: true
+wandb:
+  api: text
+  args:
+    group: rewards
+    job_type: test
+    name: 1.3B-freezed-tpu-kaggle
+  project_name: CQA_RLHF
+  table_name: test-modelname
+model_name: EleutherAI/gpt-neo-1.3B
+data:
+  data_dir: /kaggle/input/python-qa/1.0-data-div-ans-sep.json
+test_model_path: "checkpoint_path"
+model_params:
+  use_cache: true
+test_params:
+  do_compute_bertscore: false
+  do_compute_metrics: false
+generate_params:
+  do_sample: false
+  top_k: 50
+  top_p: 0.9
+  temperature: 0
+  num_return_sequences: 0
+  no_repeat_ngram_size: 2
+  max_new_tokens: 512

@@ -2,23 +2,20 @@ import torch
 from torch import nn
 import pytorch_lightning as pl
 from transformers import (
-    AutoModelForCausalLM,
+    GPTNeoForSequenceClassification,
     AutoTokenizer,
     get_linear_schedule_with_warmup,
 )
-from torchmetrics.text.bert import BERTScore
-from torchmetrics.text.rouge import ROUGEScore
-from torchmetrics import SacreBLEUScore
-import nltk
+from torchmetrics.classification import BinaryAccuracy
 import numpy as np
 
 
-class LitLM(pl.LightningModule):
+class GPTneo_Regressor(pl.LightningModule):
     def __init__(self, model_name, use_cache, batch_size=8, *args, **kwargs):
         super().__init__()
         self.save_hyperparameters()
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_name, use_cache=use_cache
+        self.model = GPTNeoForSequenceClassification.from_pretrained(
+            model_name, use_cache=use_cache, num_labels=1
         )
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -29,13 +26,8 @@ class LitLM(pl.LightningModule):
         self.model.pad_token_id = self.tokenizer.eos_token_id
 
         if self.hparams.do_compute_metrics:
-            nltk.download("punkt")
-            self.rouge = ROUGEScore()
-            self.bleu = SacreBLEUScore()
-            if self.hparams.do_compute_bertscore:
-                self.bertscore = BERTScore(
-                    lang="en", max_length=self.hparams.max_length
-                )
+            self.train_acc = BinaryAccuracy()
+            self.val_acc = BinaryAccuracy()
 
         if self.hparams.do_freeze:
             for n, p in self.model.named_parameters():
@@ -53,19 +45,20 @@ class LitLM(pl.LightningModule):
             on_step=True,
             sync_dist=True,
         )
-        return output.loss
-    
+
+        preds = int(output.logits >= 0)
+        y = int(batch['labels'] >= 0)
+        return {'loss': output.loss, 'preds': preds, 'target': y}
+
+    def training_step_end(self, outputs):
+
+        self.train_acc(outputs['preds'], outputs['target'])
+        self.log('train_accuracy', self.train_acc, on_step=True, sync_dist=True)
+
     def validation_step(self, batch, batch_idx):
         output = self.model(**batch)
         val_loss = output.loss
 
-        preds = output.logits.argmax(dim=-1)
-        labels = batch["labels"]
-
-        return {"loss": val_loss, "preds": preds, "labels": labels}
-
-    def validation_epoch_end(self, outputs):
-        val_loss = torch.stack([x["loss"] for x in outputs]).mean()
         self.log(
             "val_loss",
             val_loss,
@@ -75,46 +68,16 @@ class LitLM(pl.LightningModule):
             sync_dist=True,
         )
 
+        preds = int(output.logits >= 0)
+        y = int(batch['labels'] >= 0)
+
+        return {'loss': val_loss, 'preds': preds, 'target': y}
+
+    def validation_step_end(self, outputs):
         if self.hparams.do_compute_metrics:
-
-            pred = torch.cat([output["preds"] for output in outputs], dim=0)
-            labels = torch.cat([output["labels"] for output in outputs], dim=0)
-
-            preds = self.tokenizer.batch_decode(pred, skip_special_tokens=True)
-            labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
-
-            if self.hparams.do_compute_bertscore:
-                self.bertscore(preds, labels)
-                self.log_dict("val_bert_score", self.bertscore)
-
-            self.bleu.update(preds, [labels])
-            bleu = self.bleu.compute()
-            self.log("val_bleu", bleu, on_step=False, on_epoch=True, sync_dist=True)
-
-            self.rouge.update(preds, labels)
-            rouge = self.rouge.compute()
-
-            self.log(
-                "val_rouge1_fmeasure",
-                rouge["rouge1_fmeasure"],
-                on_step=False,
-                on_epoch=True,
-                sync_dist=True,
-            )
-            self.log(
-                "val_rouge2_fmeasure",
-                rouge["rouge2_fmeasure"],
-                on_step=False,
-                on_epoch=True,
-                sync_dist=True,
-            )
-            self.log(
-                "val_rougeL_fmeasure",
-                rouge["rougeL_fmeasure"],
-                on_step=False,
-                on_epoch=True,
-                sync_dist=True,
-            )
+            self.val_acc(outputs['preds'], outputs['target'])
+            self.log('val_accuracy', self.val_acc, on_step=False,
+                     on_epoch=True, sync_dist=True)
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
@@ -148,12 +111,3 @@ class LitLM(pl.LightningModule):
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
         return [optimizer], [lr_scheduler]
-
-    def generate(self, text: str, device, **kwargs):
-        inputs = self.tokenizer(text, return_tensors="pt")
-        inputs = inputs.to(device)
-        generated_tokens = self.model.generate(inputs["input_ids"], **kwargs)
-        generated_q_a = self.tokenizer.decode(
-            generated_tokens[0], skip_special_tokens=True
-        )
-        return generated_q_a

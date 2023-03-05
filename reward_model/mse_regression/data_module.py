@@ -1,11 +1,12 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
-import sys
-import dataset, data_utils
+import dataset
+import data_utils
+import torch
 
 
-class QADataModule(pl.LightningDataModule):
+class QA_Reward_DataModule(pl.LightningDataModule):
     def __init__(
         self, model_name, data_dir, max_length, batch_size, pad_for_tpu, *args, **kwargs
     ):
@@ -22,23 +23,15 @@ class QADataModule(pl.LightningDataModule):
     def setup(self, stage: str):
         # Assign train/val datasets for use in dataloaders
         if stage == "fit":
-            self.train_ds, self.val_ds = dataset.prepare_datasets(
-                self.hparams.data_dir,
-                self.tokenizer,
-                max_length=self.hparams.max_length,
-                padding=self.padding,
-                splits=["train", "val"],
-            )
+            self.train_ds = dataset.QA_Reward_Dataset(
+                self.hparams.data_dir, self.tokenizer, max_length=self.hparams.max_length, padding=self.padding)
+            self.val_ds = dataset.QA_Reward_Dataset(
+                self.hparams.data_dir, self.tokenizer, max_length=self.hparams.max_length, padding=self.padding, split='val')
 
         # Assign test dataset for use in dataloader(s)
         if stage == "test":
-            self.test_ds = dataset.prepare_datasets(
-                self.hparams.data_dir,
-                self.tokenizer,
-                max_length=self.hparams.max_length,
-                padding=self.padding,
-                splits=["test"],
-            )
+            self.test_ds = dataset.QA_Reward_Dataset(
+                self.hparams.data_dir, self.tokenizer, max_length=self.hparams.max_length, padding=self.padding, split='test')
 
     def train_dataloader(self):
         return DataLoader(
@@ -55,10 +48,7 @@ class QADataModule(pl.LightningDataModule):
                     self.tokenizer,
                     "attention_mask",
                 ),
-                "labels": data_utils.collate_batch(
-                    [f["labels"] for f in data],
-                    self.tokenizer
-                ),
+                "labels": torch.tensor([f["labels"] for f in data])
             },
         )
 
@@ -77,10 +67,7 @@ class QADataModule(pl.LightningDataModule):
                     self.tokenizer,
                     "attention_mask",
                 ),
-                "labels": data_utils.collate_batch(
-                    [f["labels"] for f in data],
-                    self.tokenizer,
-                ),
+                "labels": torch.tensor([f["labels"] for f in data])
             },
         )
 
@@ -93,18 +80,12 @@ class QADataModule(pl.LightningDataModule):
                 "input_ids": data_utils.collate_batch(
                     [f["input_ids"] for f in data],
                     self.tokenizer,
-                    max_length=self.hparams.max_length,
                 ),
                 "attention_mask": data_utils.collate_batch(
                     [f["attention_mask"] for f in data],
                     self.tokenizer,
                     "attention_mask",
-                    max_length=self.hparams.max_length,
                 ),
-                "labels": data_utils.collate_batch(
-                    [f["labels"] for f in data],
-                    self.tokenizer,
-                    max_length=self.hparams.max_length,
-                ),
+                "labels": torch.tensor([f["labels"] for f in data])
             },
         )
