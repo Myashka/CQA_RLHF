@@ -33,9 +33,7 @@ class LitLM(pl.LightningModule):
             self.rouge = ROUGEScore()
             self.bleu = SacreBLEUScore()
             if self.hparams.do_compute_bertscore:
-                self.bertscore = BERTScore(
-                    lang="en", max_length=self.hparams.max_length
-                )
+                self.bertscore = BERTScore(lang="en")
 
         if self.hparams.do_freeze:
             for n, p in self.model.named_parameters():
@@ -54,7 +52,7 @@ class LitLM(pl.LightningModule):
             sync_dist=True,
         )
         return output.loss
-    
+
     def validation_step(self, batch, batch_idx):
         output = self.model(**batch)
         val_loss = output.loss
@@ -81,7 +79,8 @@ class LitLM(pl.LightningModule):
             labels = torch.cat([output["labels"] for output in outputs], dim=0)
 
             preds = self.tokenizer.batch_decode(pred, skip_special_tokens=True)
-            labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+            labels = self.tokenizer.batch_decode(
+                labels, skip_special_tokens=True)
 
             if self.hparams.do_compute_bertscore:
                 self.bertscore(preds, labels)
@@ -89,7 +88,8 @@ class LitLM(pl.LightningModule):
 
             self.bleu.update(preds, [labels])
             bleu = self.bleu.compute()
-            self.log("val_bleu", bleu, on_step=False, on_epoch=True, sync_dist=True)
+            self.log("val_bleu", bleu, on_step=False,
+                     on_epoch=True, sync_dist=True)
 
             self.rouge.update(preds, labels)
             rouge = self.rouge.compute()

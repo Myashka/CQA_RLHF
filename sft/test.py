@@ -44,6 +44,10 @@ def main(config_file):
             **config['test_params']
         ).to(device)
 
+    test_dataset = prepare_datasets(
+        config["data"]["data_dir"], model.tokenizer, splits=["test"], train=False
+    )[0]
+
     wandb_logger = WandbLogger(
         project=config["wandb"]["project_name"],
         log_model=True,
@@ -51,10 +55,6 @@ def main(config_file):
     )
 
     wandb_logger.watch(model, log_graph=False)
-
-    test_dataset = prepare_datasets(
-        config["data"]["data_dir"], model.tokenizer, splits=["test"], train=True
-    )[0]
 
     columns = ["question", "original_answer", "generated_answer"]
 
@@ -78,7 +78,7 @@ def main(config_file):
         test_sample = []
         gen_question_answer = model.generate(
             question_promt, device, **config["generate_params"]
-        ).to("cpu")
+        )
         gen_answer = gen_question_answer[len(question_promt) :]
 
         test_sample.append(question_promt)

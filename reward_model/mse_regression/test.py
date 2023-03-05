@@ -57,7 +57,7 @@ def main(config_file):
     test_data = []
     for sample in tqdm(test_dataset):
         test_sample = []
-        model_output = model(**sample).to("cpu")
+        model_output = model(**sample)
 
         test_sample.append(model.tokenizer.decode(sample['input_ids']))
         test_sample.append(sample['labels'])
