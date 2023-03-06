@@ -105,7 +105,7 @@ def main(config_file):
         test_data.append(test_sample)
 
     # log the Table
-    wandb_logger.log_table(key=config["table_name"], columns=columns, data=test_data)
+    wandb_logger.log_table(key=config['wandb']["table_name"], columns=columns, data=test_data)
 
 
 if __name__ == "__main__":

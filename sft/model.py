@@ -11,6 +11,7 @@ from torchmetrics.text.rouge import ROUGEScore
 from torchmetrics import SacreBLEUScore
 import nltk
 import numpy as np
+import gc
 
 
 class LitLM(pl.LightningModule):
@@ -75,10 +76,10 @@ class LitLM(pl.LightningModule):
 
         if self.hparams.do_compute_metrics:
 
-            pred = torch.cat([output["preds"] for output in outputs], dim=0)
+            preds = torch.cat([output["preds"] for output in outputs], dim=0)
             labels = torch.cat([output["labels"] for output in outputs], dim=0)
 
-            preds = self.tokenizer.batch_decode(pred, skip_special_tokens=True)
+            preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
             labels = self.tokenizer.batch_decode(
                 labels, skip_special_tokens=True)
 
@@ -115,6 +116,8 @@ class LitLM(pl.LightningModule):
                 on_epoch=True,
                 sync_dist=True,
             )
+            del preds, labels, 
+            gc.collect()
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
@@ -147,11 +150,16 @@ class LitLM(pl.LightningModule):
             num_warmup_steps=self.hparams.warmup_steps,
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
-        return [optimizer], [lr_scheduler]
+        return [optimizer], [{
+            'scheduler': lr_scheduler,
+            'interval': 'step',
+            'frequency': 1}]
 
     def generate(self, text: str, device, **kwargs):
-        inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=512)['input_ids']
-        answer_promt = self.tokenizer(r"\nAnswer: ", return_tensors="pt")['input_ids']
+        inputs = self.tokenizer(text, return_tensors="pt",
+                                truncation=True, max_length=512)['input_ids']
+        answer_promt = self.tokenizer(
+            r"\nAnswer: ", return_tensors="pt")['input_ids']
         inputs = torch.cat((inputs, answer_promt), dim=-1)
         inputs = inputs.to(device)
         generated_tokens = self.model.generate(inputs, **kwargs)
