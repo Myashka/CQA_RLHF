@@ -178,7 +178,7 @@ class LitLM(pl.LightningModule):
         self._frozen = False
         print('Model unfreezed')
 
-    def on_epoch_start(self):
+    def on_train_epoch_start(self):
         """pytorch lightning hook"""
         if self.current_epoch < self.hparams.nr_frozen_epochs:
             self.freeze()
