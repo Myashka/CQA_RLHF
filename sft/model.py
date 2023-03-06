@@ -79,7 +79,8 @@ class LitLM(pl.LightningModule):
             preds = torch.cat([output["preds"] for output in outputs], dim=0)
             labels = torch.cat([output["labels"] for output in outputs], dim=0)
 
-            preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
+            preds = self.tokenizer.batch_decode(
+                preds, skip_special_tokens=True)
             labels = self.tokenizer.batch_decode(
                 labels, skip_special_tokens=True)
 
@@ -116,7 +117,7 @@ class LitLM(pl.LightningModule):
                 on_epoch=True,
                 sync_dist=True,
             )
-            del preds, labels, 
+            del preds, labels,
             gc.collect()
 
     def configure_optimizers(self):
@@ -154,6 +155,36 @@ class LitLM(pl.LightningModule):
             'scheduler': lr_scheduler,
             'interval': 'step',
             'frequency': 1}]
+
+    def freeze(self) -> None:
+        # freeze all layers, except the final classifier layers
+        for n, p in self.model.named_parameters():
+                if "transformer.h" in n:
+                    layer_num = int(n.split(".")[2])
+                    if "ln_" not in n and layer_num > 0 and layer_num < 23:
+                        p.requires_grad = False
+
+        self._frozen = True
+        print('Model freezed')
+
+    def unfreeze(self) -> None:
+        if self._frozen:
+            for n, p in self.model.named_parameters():
+                if "transformer.h" in n:
+                    layer_num = int(n.split(".")[2])
+                    if "ln_" not in n and layer_num > 0 and layer_num < 23:
+                        p.requires_grad = True
+
+        self._frozen = False
+        print('Model unfreezed')
+
+    def on_epoch_start(self):
+        """pytorch lightning hook"""
+        if self.current_epoch < self.hparams.nr_frozen_epochs:
+            self.freeze()
+
+        if self.current_epoch >= self.hparams.nr_frozen_epochs:
+            self.unfreeze()
 
     def generate(self, text: str, device, **kwargs):
         inputs = self.tokenizer(text, return_tensors="pt",

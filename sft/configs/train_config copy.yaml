@@ -33,6 +33,7 @@ trainer:
     precision: "16"
     strategy: deepspeed_stage_2
     val_check_interval: 500
+    nr_frozen_epochs: 2
 wandb:
   api: text
   args:
