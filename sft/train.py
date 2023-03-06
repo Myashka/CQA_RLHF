@@ -10,6 +10,8 @@ from model import LitLM
 from data_module import QADataModule
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
+from pytorch_lightning.callbacks import LearningRateMonitor
+
 
 
 @click.command()
@@ -39,6 +41,9 @@ def main(config_file):
     )
 
     wandb_logger.watch(llm, log_graph=False)
+
+    lr_monitor = LearningRateMonitor(logging_interval='step')
+
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss",
         mode="min",
@@ -53,7 +58,7 @@ def main(config_file):
     trainer = pl.Trainer(
         logger=wandb_logger,
         default_root_dir=os.getcwd(),
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback, lr_monitor],
         **config["trainer"]["params"],
     )
 
