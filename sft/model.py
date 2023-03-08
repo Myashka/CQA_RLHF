@@ -148,7 +148,7 @@ class LitLM(pl.LightningModule):
 
         lr_scheduler = get_linear_schedule_with_warmup(
             optimizer=optimizer,
-            num_warmup_steps=self.hparams.warmup_steps,
+            num_warmup_steps=int(self.hparams.warmup_steps_per_cent * self.trainer.estimated_stepping_batches),
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
         return [optimizer], [{

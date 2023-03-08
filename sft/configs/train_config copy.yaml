@@ -13,7 +13,7 @@ model_params:
   do_freeze: false
   learning_rate: 2.0e-05
   use_cache: false
-  warmup_steps: 100
+  warmup_steps_per_cent: 0.01
   weight_decay: 0.001
 seed: 42
 trainer:

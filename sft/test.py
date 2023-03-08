@@ -103,6 +103,7 @@ def main(config_file):
                 test_sample.append(bert_score["recall"])
 
         test_data.append(test_sample)
+        assert test_data[-1] is not None, 'Something go wrong!'
 
     # log the Table
     wandb_logger.log_table(key=config['wandb']["table_name"], columns=columns, data=test_data)
