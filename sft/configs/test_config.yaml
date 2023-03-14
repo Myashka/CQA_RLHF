@@ -1,27 +1,26 @@
-seed: 42
 cuda: true
+data:
+  data_dir: /content/drive/MyDrive/Colab Notebooks/vkr_data/data/1.0-data-div-ans-sep.json
+generate_params:
+  do_sample: true
+  max_new_tokens: 512
+  top_p: 0.9
+log_file: ''
+model_name: EleutherAI/gpt-neo-125M
+model_params:
+  do_freeze: false
+  use_cache: true
+save_steps: 100
+seed: 42
+test_model_path: null
+test_params:
+  do_compute_bertscore: false
+  do_compute_metrics: true
 wandb:
-  api: text
+  api: 60fce56bfaec85b8d6bc78bfac2086891f5afe54
   args:
     group: sft
     job_type: test
-    name: 1.2B-freezed-tpu-kaggle
+    name: 125M-base-test
   project_name: CQA_RLHF
-  table_name: test-modelname
-model_name: EleutherAI/gpt-neo-1.3B
-data:
-  data_dir: /kaggle/input/python-qa/1.0-data-div-ans-sep.json
-test_model_path: "checkpoint_path"
-model_params:
-  use_cache: true
-test_params:
-  do_compute_bertscore: false
-  do_compute_metrics: false
-generate_params:
-  do_sample: false
-  top_k: 50
-  top_p: 0.9
-  temperature: 0
-  num_return_sequences: 0
-  no_repeat_ngram_size: 2
-  max_new_tokens: 512
+  table_name: 125M-base

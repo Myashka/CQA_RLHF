@@ -13,6 +13,20 @@ import nltk
 from dataset import prepare_datasets
 import torch
 from tqdm.auto import tqdm
+import pandas as pd
+import os
+import gc
+
+
+def save_csv(data, colunms, file_path):
+    df = pd.DataFrame(data, colunms=colunms)
+    if os.path.exists(file_path):
+        mode = 'a'
+        header = False
+    else:
+        mode = 'w'
+        header = True
+    df.to_csv(file_path, mode=mode, header=header)
 
 
 @click.command()
@@ -34,7 +48,8 @@ def main(config_file):
     wandb.login(key=config["wandb"]["api"])
 
     if config["test_model_path"] is not None:
-        model = LitLM.load_from_checkpoint(config["test_model_path"]).to(device)
+        model = LitLM.load_from_checkpoint(
+            config["test_model_path"]).to(device)
         if config["model_params"]["use_cache"]:
             model.config.use_cache = True
     else:
@@ -74,12 +89,13 @@ def main(config_file):
     model.eval()
 
     test_data = []
+    step_processed = 0
     for question_promt, answer in tqdm(test_dataset):
         test_sample = []
         gen_question_answer = model.generate(
             question_promt, device, **config["generate_params"]
         )
-        gen_answer = gen_question_answer[len(question_promt) :]
+        gen_answer = str(gen_question_answer[len(question_promt):])
 
         test_sample.append(question_promt)
         test_sample.append(answer)
@@ -105,8 +121,16 @@ def main(config_file):
         test_data.append(test_sample)
         assert test_data[-1] is not None, 'Something go wrong!'
 
+        step_processed += 1
+        if step_processed % config['save_steps'] == 0:
+            save_csv(test_data, columns, config['log_file'])
+            test_data = []
+            gc.collect()
+
+    save_csv(test_data, columns, config['log_file'])
+
     # log the Table
-    wandb_logger.log_table(key=config['wandb']["table_name"], columns=columns, data=test_data)
+    # wandb_logger.log_table(key=config['wandb']["table_name"], columns=columns, data=test_data)
 
 
 if __name__ == "__main__":
