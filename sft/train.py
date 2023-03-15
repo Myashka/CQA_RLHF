@@ -45,8 +45,8 @@ def main(config_file):
     lr_monitor = LearningRateMonitor(logging_interval='step')
 
     checkpoint_callback = ModelCheckpoint(
-        monitor=["trainer"]["checkpoint"]['log_obg'],
-        mode=["trainer"]["checkpoint"]['mode'],
+        monitor=config["trainer"]["checkpoint"]['log_obg'],
+        mode=config["trainer"]["checkpoint"]['mode'],
         filename="gpt-neo-sft-{epoch:02d}-{val_loss}",
     )
     # checkpoint_callback = ModelCheckpoint(
