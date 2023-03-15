@@ -11,6 +11,7 @@ from data_module import QADataModule
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 from pytorch_lightning.callbacks import LearningRateMonitor
+from pytorch_lightning.strategies.deepspeed import DeepSpeedStrategy
 
 
 
@@ -47,7 +48,6 @@ def main(config_file):
     checkpoint_callback = ModelCheckpoint(
         monitor=config["trainer"]["checkpoint"]['log_obg'],
         mode=config["trainer"]["checkpoint"]['mode'],
-        filename="gpt-neo-sft-{epoch:02d}-{val_loss}",
     )
     # checkpoint_callback = ModelCheckpoint(
     #     every_n_train_steps=config["trainer"]["checkpoint"]["every_n_train_steps"],
@@ -55,12 +55,21 @@ def main(config_file):
     #     dirpath=config["trainer"]["checkpoint"]["dirpath"],
     # )
 
-    trainer = pl.Trainer(
-        logger=wandb_logger,
-        default_root_dir=os.getcwd(),
-        callbacks=[checkpoint_callback, lr_monitor],
-        **config["trainer"]["params"],
-    )
+    if config['trainer']['params']['accelerator'] == 'gpu':
+        trainer = pl.Trainer(
+            logger=wandb_logger,
+            default_root_dir=os.getcwd(),
+            callbacks=[checkpoint_callback, lr_monitor],
+            strategy=DeepSpeedStrategy(logging_batch_size_per_gpu=config["data"]["batch_size"]),
+            **config["trainer"]["params"],
+        )
+    else:
+        trainer = pl.Trainer(
+            logger=wandb_logger,
+            default_root_dir=os.getcwd(),
+            callbacks=[checkpoint_callback, lr_monitor],
+            **config["trainer"]["params"],
+        )
 
     trainer.fit(
         llm,

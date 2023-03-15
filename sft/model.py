@@ -140,7 +140,7 @@ class LitLM(pl.LightningModule):
                 "weight_decay": 0.0,
             },
         ]
-        optimizer = torch.optim.AdamW(
+        optimizer = torch.optim.Adam(
             optimizer_grouped_parameters,
             lr=self.hparams.learning_rate,
             betas=self.hparams.adam_betas,
