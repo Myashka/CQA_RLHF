@@ -36,12 +36,15 @@ class LitLM(pl.LightningModule):
             if self.hparams.do_compute_bertscore:
                 self.bertscore = BERTScore(lang="en")
 
+        self._frozen = False
+
         if self.hparams.do_freeze:
             for n, p in self.model.named_parameters():
                 if "transformer.h" in n:
                     layer_num = int(n.split(".")[2])
                     if "ln_" not in n and layer_num > 0 and layer_num < 23:
                         p.requires_grad = False
+            self._frozen = True
 
     def training_step(self, batch, batch_idx):
         output = self.model(**batch)
