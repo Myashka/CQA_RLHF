@@ -18,8 +18,8 @@ import os
 import gc
 
 
-def save_csv(data, colunms, file_path):
-    df = pd.DataFrame(data, colunms=colunms)
+def save_csv(data, columns, file_path):
+    df = pd.DataFrame(data, columns=columns)
     if os.path.exists(file_path):
         mode = 'a'
         header = False
@@ -106,11 +106,11 @@ def main(config_file):
             rouge_score = rouge(gen_answer, answer)
             bleu_score = bleu(gen_answer, [answer])
 
-            test_sample.append(bleu_score)
+            test_sample.append(bleu_score.item())
 
-            test_sample.append(rouge_score["rouge1_fmeasure"])
-            test_sample.append(rouge_score["rouge2_fmeasure"])
-            test_sample.append(rouge_score["rougeL_fmeasure"])
+            test_sample.append(rouge_score["rouge1_fmeasure"].item())
+            test_sample.append(rouge_score["rouge2_fmeasure"].item())
+            test_sample.append(rouge_score["rougeL_fmeasure"].item())
 
             if config['test_params']["do_compute_bertscore"]:
                 bert_score = bertscore(gen_answer, answer)

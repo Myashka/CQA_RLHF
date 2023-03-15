@@ -175,8 +175,8 @@ class LitLM(pl.LightningModule):
                     if "ln_" not in n and layer_num > 0 and layer_num < 23:
                         p.requires_grad = True
 
-        self._frozen = False
-        print('Model unfreezed')
+            self._frozen = False
+            print('Model unfreezed')
 
     def on_train_epoch_start(self):
         """pytorch lightning hook"""
