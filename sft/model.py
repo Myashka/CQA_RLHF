@@ -22,7 +22,7 @@ class LitLM(pl.LightningModule):
             model_name, use_cache=use_cache
         )
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained('EleutherAI/gpt-neo-125M')
         self.model.resize_token_embeddings(len(self.tokenizer))
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.model.config.end_token_id = self.tokenizer.eos_token_id

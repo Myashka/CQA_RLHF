@@ -29,12 +29,15 @@ def main(config_file):
     wandb.login(key=config["wandb"]["api"])
 
     dm = QADataModule(config["model_name"], **config["data"])
-    llm = LitLM(
+    if config["trainer"]["ckpt_path"]:
+        llm = LitLM.load_from_checkpoint(config["trainer"]["ckpt_path"], **config["model_params"])
+    else:
+        llm = LitLM(
         model_name=config["model_name"],
         batch_size=config["data"]["batch_size"],
         max_length=config["data"]["max_length"],
-        **config["model_params"],
-    )
+        **config["model_params"])
+        
     wandb_logger = WandbLogger(
         project=config["wandb"]["project_name"],
         log_model="all",
@@ -74,8 +77,9 @@ def main(config_file):
     trainer.fit(
         llm,
         datamodule=dm,
-        ckpt_path=config["trainer"]["ckpt_path"],
+        # ckpt_path=config["trainer"]["ckpt_path"],
     )
+    wandb.finish()
 
 
 if __name__ == "__main__":
