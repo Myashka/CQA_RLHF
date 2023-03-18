@@ -66,7 +66,7 @@ class QADataset(Dataset):
             )
 
             if self.zero_question_labels:
-                question_len = len(self.tokenizer.encode(qa_pair["Question"]))
+                question_len = len(self.tokenizer.encode(r"Question\n" +qa_pair["Question"]+ r"\nAnswer: "))
                 labels = tokenized_dict["input_ids"].clone()
                 labels[-1][:question_len] = -100
             else:

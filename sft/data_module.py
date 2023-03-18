@@ -26,6 +26,7 @@ class QADataModule(pl.LightningDataModule):
                 self.hparams.data_dir,
                 self.tokenizer,
                 max_length=self.hparams.max_length,
+                zero_question_labels=self.hparams.zero_question_labels,
                 padding=self.padding,
                 splits=["train", "val"],
             )
