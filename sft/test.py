@@ -50,14 +50,15 @@ def main(config_file):
     if config["test_model_path"] is not None:
         model = LitLM.load_from_checkpoint(
             config["test_model_path"]).to(device)
-        if config["model_params"]["use_cache"]:
-            model.config.use_cache = True
     else:
         model = LitLM(
             model_name=config["model_name"],
             **config["model_params"],
             **config['test_params']
         ).to(device)
+
+    if config["model_params"]["use_cache"]:
+        model.model.config.use_cache = True
 
     test_dataset = prepare_datasets(
         config["data"]["data_dir"], model.tokenizer, splits=["test"], train=False
@@ -128,7 +129,7 @@ def main(config_file):
             gc.collect()
 
     save_csv(test_data, columns, config['log_file'])
-
+    wandb.finish()
     # log the Table
     # wandb_logger.log_table(key=config['wandb']["table_name"], columns=columns, data=test_data)
 
