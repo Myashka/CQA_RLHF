@@ -190,11 +190,10 @@ class LitLM(pl.LightningModule):
             self.unfreeze()
 
     def generate(self, text: str, device, **kwargs):
-        inputs = self.tokenizer(text, return_tensors="pt",
-                                truncation=True, max_length=512)['input_ids']
-        answer_promt = self.tokenizer(
-            r"\nAnswer: ", return_tensors="pt")['input_ids']
-        inputs = torch.cat((inputs, answer_promt), dim=-1)
+        inputs = self.tokenizer(text+r"\nAnswer: ", return_tensors="pt",
+                                truncation=True,
+                                max_length=512,
+                                padding='max_legnth')['input_ids']
         inputs = inputs.to(device)
         generated_tokens = self.model.generate(inputs, **kwargs)
         generated_q_a = self.tokenizer.decode(
