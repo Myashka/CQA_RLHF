@@ -23,11 +23,11 @@ class LitLM(pl.LightningModule):
         )
 
         self.tokenizer = AutoTokenizer.from_pretrained('EleutherAI/gpt-neo-125M')
-        self.model.resize_token_embeddings(len(self.tokenizer))
         self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.model.config.end_token_id = self.tokenizer.eos_token_id
-        self.model.config.pad_token_id = self.model.config.eos_token_id
-        self.model.pad_token_id = self.tokenizer.eos_token_id
+        self.model.resize_token_embeddings(len(self.tokenizer))
+        # self.model.config.end_token_id = self.tokenizer.eos_token_id
+        # self.model.config.pad_token_id = self.model.config.eos_token_id
+        # self.model.pad_token_id = self.tokenizer.eos_token_id
 
         if self.hparams.do_compute_metrics:
             nltk.download("punkt")
@@ -193,7 +193,7 @@ class LitLM(pl.LightningModule):
         inputs = self.tokenizer(text+r"\nAnswer: ", return_tensors="pt",
                                 truncation=True,
                                 max_length=512,
-                                padding='max_legnth')['input_ids']
+                                padding='max_length')['input_ids']
         inputs = inputs.to(device)
         generated_tokens = self.model.generate(inputs, **kwargs)
         generated_q_a = self.tokenizer.decode(
