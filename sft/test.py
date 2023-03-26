@@ -76,7 +76,7 @@ def main(config_file):
 
     if config['test_params']["do_compute_metrics"]:
         rouge = ROUGEScore()
-        bleu = SacreBLEUScore()
+        bleu = SacreBLEUScore(1, lowercase=True)
         columns.append("bleu")
         columns.append("rouge1_fmeasure")
         columns.append("rouge2_fmeasure")
@@ -105,7 +105,7 @@ def main(config_file):
         if config['test_params']["do_compute_metrics"]:
 
             rouge_score = rouge(gen_answer, answer)
-            bleu_score = bleu(gen_answer, [answer])
+            bleu_score = bleu(gen_answer, answer)
 
             test_sample.append(bleu_score.item())
 

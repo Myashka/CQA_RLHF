@@ -192,10 +192,9 @@ class LitLM(pl.LightningModule):
     def generate(self, text: str, device, **kwargs):
         inputs = self.tokenizer(text+r"\nAnswer: ", return_tensors="pt",
                                 truncation=True,
-                                max_length=512,
-                                padding='max_length')['input_ids']
+                                max_length=512)
         inputs = inputs.to(device)
-        generated_tokens = self.model.generate(inputs, **kwargs)
+        generated_tokens = self.model.generate(**inputs, **kwargs)
         generated_q_a = self.tokenizer.decode(
             generated_tokens[0], skip_special_tokens=True
         )

@@ -18,12 +18,12 @@ class GPTneo_Regressor(pl.LightningModule):
             model_name, use_cache=use_cache, num_labels=1
         )
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained('EleutherAI/gpt-neo-125M')
         self.model.resize_token_embeddings(len(self.tokenizer))
         self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.model.config.end_token_id = self.tokenizer.eos_token_id
-        self.model.config.pad_token_id = self.model.config.eos_token_id
-        self.model.pad_token_id = self.tokenizer.eos_token_id
+        # self.model.config.end_token_id = self.tokenizer.eos_token_id
+        # self.model.config.pad_token_id = self.model.config.eos_token_id
+        # self.model.pad_token_id = self.tokenizer.eos_token_id
 
         if self.hparams.do_compute_metrics:
             self.train_acc = BinaryAccuracy()
@@ -99,7 +99,7 @@ class GPTneo_Regressor(pl.LightningModule):
                 "weight_decay": 0.0,
             },
         ]
-        optimizer = torch.optim.AdamW(
+        optimizer = torch.optim.Adam(
             optimizer_grouped_parameters,
             lr=self.hparams.learning_rate,
             betas=self.hparams.adam_betas,
@@ -107,7 +107,37 @@ class GPTneo_Regressor(pl.LightningModule):
 
         lr_scheduler = get_linear_schedule_with_warmup(
             optimizer=optimizer,
-            num_warmup_steps=self.hparams.warmup_steps,
+            num_warmup_steps=self.hparams.warmup_steps_per_cent * self.trainer.estimated_stepping_batches,
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
         return [optimizer], [lr_scheduler]
+    
+    def freeze(self) -> None:
+        # freeze all layers, except the final classifier layers
+        for n, p in self.model.named_parameters():
+                if "transformer.h" in n:
+                    layer_num = int(n.split(".")[2])
+                    if "ln_" not in n and layer_num > 0 and layer_num < 23:
+                        p.requires_grad = False
+
+        self._frozen = True
+        print('Model freezed')
+
+    def unfreeze(self) -> None:
+        if self._frozen:
+            for n, p in self.model.named_parameters():
+                if "transformer.h" in n:
+                    layer_num = int(n.split(".")[2])
+                    if "ln_" not in n and layer_num > 0 and layer_num < 23:
+                        p.requires_grad = True
+
+            self._frozen = False
+            print('Model unfreezed')
+
+    def on_train_epoch_start(self):
+        """pytorch lightning hook"""
+        if self.current_epoch < self.hparams.nr_frozen_epochs:
+            self.freeze()
+
+        if self.current_epoch >= self.hparams.nr_frozen_epochs:
+            self.unfreeze()

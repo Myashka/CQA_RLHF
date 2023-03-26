@@ -39,11 +39,10 @@ def main(config_file):
 
     wandb_logger.watch(regressor, log_graph=False)
     checkpoint_callback = ModelCheckpoint(
-        monitor="val_loss",
-        mode="min",
-        filename="gpt-neo-reward-{epoch:02d}-{val_loss}",
+        monitor=config["trainer"]["checkpoint"]['log_obg'],
+        mode=config["trainer"]["checkpoint"]['mode'],
     )
-    earlystopping = EarlyStopping(monitor='val_loss', patience=5, mode='min')
+    # earlystopping = EarlyStopping(monitor='val_loss', patience=5, mode='min')
     # checkpoint_callback = ModelCheckpoint(
     #     every_n_train_steps=config["trainer"]["checkpoint"]["every_n_train_steps"],
     #     filename="gpt-neo-sft-{epoch:02d}-{global_step}",
@@ -53,7 +52,7 @@ def main(config_file):
     trainer = pl.Trainer(
         logger=wandb_logger,
         default_root_dir=os.getcwd(),
-        callbacks=[checkpoint_callback, earlystopping],
+        callbacks=[checkpoint_callback],
         **config["trainer"]["params"],
     )
 
