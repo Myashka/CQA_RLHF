@@ -25,8 +25,9 @@ class GPTneo_Regressor(pl.LightningModule):
         self.model.config.pad_token_id = self.model.config.eos_token_id
         self.model.pad_token_id = self.tokenizer.eos_token_id
 
+        self.train_acc = BinaryAccuracy()
+
         if self.hparams.do_compute_metrics:
-            self.train_acc = BinaryAccuracy()
             self.val_acc = BinaryAccuracy()
 
         if self.hparams.do_freeze:

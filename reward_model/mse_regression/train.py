@@ -10,6 +10,7 @@ from model import GPTneo_Regressor
 from data_module import QA_Reward_DataModule
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
+from pytorch_lightning.callbacks import LearningRateMonitor
 
 
 @click.command()
@@ -42,6 +43,8 @@ def main(config_file):
         monitor=config["trainer"]["checkpoint"]['log_obg'],
         mode=config["trainer"]["checkpoint"]['mode'],
     )
+
+    lr_monitor = LearningRateMonitor(logging_interval='step')
     # earlystopping = EarlyStopping(monitor='val_loss', patience=5, mode='min')
     # checkpoint_callback = ModelCheckpoint(
     #     every_n_train_steps=config["trainer"]["checkpoint"]["every_n_train_steps"],
@@ -52,7 +55,7 @@ def main(config_file):
     trainer = pl.Trainer(
         logger=wandb_logger,
         default_root_dir=os.getcwd(),
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback, lr_monitor],
         **config["trainer"]["params"],
     )
 
@@ -61,6 +64,8 @@ def main(config_file):
         datamodule=dm,
         ckpt_path=config["trainer"]["ckpt_path"],
     )
+
+    wandb.finish()
 
 
 if __name__ == "__main__":

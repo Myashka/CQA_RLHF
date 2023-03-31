@@ -11,6 +11,16 @@ import torch
 from tqdm.auto import tqdm
 
 
+def save_csv(data, columns, file_path):
+    df = pd.DataFrame(data, columns=columns)
+    if os.path.exists(file_path):
+        mode = 'a'
+        header = False
+    else:
+        mode = 'w'
+        header = True
+    df.to_csv(file_path, mode=mode, header=header)
+
 @click.command()
 @click.option("--config_file", default="config.yaml", help="Path to config YAML file")
 def main(config_file):
@@ -55,6 +65,7 @@ def main(config_file):
     model.eval()
 
     test_data = []
+    step_processed = 0
     for sample in tqdm(test_dataset):
         test_sample = []
         model_output = model(**sample)
@@ -66,9 +77,16 @@ def main(config_file):
 
         test_data.append(test_sample)
 
+        step_processed += 1
+        if step_processed % config['save_steps'] == 0:
+            save_csv(test_data, columns, config['log_file'])
+
     # log the Table
     wandb_logger.log_table(
         key=config["table_name"], columns=columns, data=test_data)
+
+    save_csv(test_data, columns, config['log_file'])
+    wandb.finish()
 
 
 if __name__ == "__main__":
