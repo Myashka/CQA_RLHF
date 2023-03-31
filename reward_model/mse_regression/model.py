@@ -21,9 +21,9 @@ class GPTneo_Regressor(pl.LightningModule):
         self.tokenizer = AutoTokenizer.from_pretrained('EleutherAI/gpt-neo-125M')
         self.model.resize_token_embeddings(len(self.tokenizer))
         self.tokenizer.pad_token = self.tokenizer.eos_token
-        # self.model.config.end_token_id = self.tokenizer.eos_token_id
-        # self.model.config.pad_token_id = self.model.config.eos_token_id
-        # self.model.pad_token_id = self.tokenizer.eos_token_id
+        self.model.config.end_token_id = self.tokenizer.eos_token_id
+        self.model.config.pad_token_id = self.model.config.eos_token_id
+        self.model.pad_token_id = self.tokenizer.eos_token_id
 
         if self.hparams.do_compute_metrics:
             self.train_acc = BinaryAccuracy()
