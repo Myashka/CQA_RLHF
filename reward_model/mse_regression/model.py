@@ -46,12 +46,14 @@ class GPTneo_Regressor(pl.LightningModule):
             sync_dist=True,
         )
 
-        preds = int(output.logits >= 0)
-        y = int(batch['labels'] >= 0)
+        preds = (output.logits >= 0).int()
+        y = (batch['labels'] >= 0).int()
         return {'loss': output.loss, 'preds': preds, 'target': y}
 
     def training_step_end(self, outputs):
 
+        outputs['preds'] = outputs['preds'].reshape((1, -1))[0]
+        outputs['target'] = outputs['target'].reshape((1, -1))[0]
         self.train_acc(outputs['preds'], outputs['target'])
         self.log('train_accuracy', self.train_acc, on_step=True, sync_dist=True)
 
@@ -68,13 +70,15 @@ class GPTneo_Regressor(pl.LightningModule):
             sync_dist=True,
         )
 
-        preds = int(output.logits >= 0)
-        y = int(batch['labels'] >= 0)
+        preds = (output.logits >= 0).int()
+        y = (batch['labels'] >= 0).int()
 
         return {'loss': val_loss, 'preds': preds, 'target': y}
 
     def validation_step_end(self, outputs):
         if self.hparams.do_compute_metrics:
+            outputs['preds'] = outputs['preds'].reshape((1, -1))[0]
+            outputs['target'] = outputs['target'].reshape((1, -1))[0]
             self.val_acc(outputs['preds'], outputs['target'])
             self.log('val_accuracy', self.val_acc, on_step=False,
                      on_epoch=True, sync_dist=True)
