@@ -7,8 +7,11 @@ from yaml import CLoader
 import click
 from model import GPTneo_Regressor
 from data_module import QA_Reward_DataModule
+import os
 import torch
 from tqdm.auto import tqdm
+import gc
+import pandas as pd
 
 
 def save_csv(data, columns, file_path):
@@ -40,8 +43,6 @@ def main(config_file):
     if config["test_model_path"] is not None:
         model = GPTneo_Regressor.load_from_checkpoint(
             config["test_model_path"]).to(device)
-        if config["model_params"]["use_cache"]:
-            model.config.use_cache = True
     else:
         model = GPTneo_Regressor(
             model_name=config["model_name"],
@@ -49,8 +50,14 @@ def main(config_file):
             **config['test_params']
         ).to(device)
 
-    test_dataset = QA_Reward_DataModule(
-        config["data"]["data_dir"], model.tokenizer, split="test")
+    if config["model_params"]["use_cache"]:
+        model.model.config.use_cache = True
+
+    dm = QA_Reward_DataModule(
+        model_name=config["model_name"], data_dir=config["data"]["data_dir"], max_length=512, pad_for_tpu=True, batch_size=1)
+    
+    dm.setup('test')
+    test_loader = dm.test_dataloader()
 
     wandb_logger = WandbLogger(
         project=config["wandb"]["project_name"],
@@ -62,18 +69,22 @@ def main(config_file):
 
     columns = ["qa_pair", "target_score", "pred_score", 'mse']
 
-    model.eval()
+    model.model.eval()
 
     test_data = []
     step_processed = 0
-    for sample in tqdm(test_dataset):
+    for sample in tqdm(test_loader):
+        for key, value in sample.items():
+            sample[key] = sample[key].to(device)
         test_sample = []
-        model_output = model(**sample)
+        model_output = model.model(**sample)
 
         test_sample.append(model.tokenizer.batch_decode(sample['input_ids'], skip_special_tokens=True)[0])
-        test_sample.append(sample['labels'])
-        test_sample.append(model_output.logits)
-        test_sample.append(model_output.loss)
+        test_sample.append(sample['labels'].cpu().detach().numpy()[0])
+        test_sample.append(model_output.logits.cpu().detach().numpy()[0][0])
+        test_sample.append(model_output.loss.item())
+
+        gc.collect()
 
         test_data.append(test_sample)
 
@@ -81,11 +92,11 @@ def main(config_file):
         if step_processed % config['save_steps'] == 0:
             save_csv(test_data, columns, config['log_file'])
 
+    save_csv(test_data, columns, config['log_file'])
     # log the Table
     wandb_logger.log_table(
-        key=config["table_name"], columns=columns, data=test_data)
+        key=config['wandb']["table_name"], columns=columns, data=test_data)
 
-    save_csv(test_data, columns, config['log_file'])
     wandb.finish()
 
 
