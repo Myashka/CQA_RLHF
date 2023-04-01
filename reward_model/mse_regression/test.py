@@ -91,11 +91,12 @@ def main(config_file):
         step_processed += 1
         if step_processed % config['save_steps'] == 0:
             save_csv(test_data, columns, config['log_file'])
+            test_data = []
 
     save_csv(test_data, columns, config['log_file'])
     # log the Table
-    wandb_logger.log_table(
-        key=config['wandb']["table_name"], columns=columns, data=test_data)
+    # wandb_logger.log_table(
+    #     key=config['wandb']["table_name"], columns=columns, data=test_data)
 
     wandb.finish()
 
