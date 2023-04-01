@@ -33,11 +33,11 @@ class QADataset(Dataset):
             for pair in self.pairs:
                 sample_length = len(
                     self.tokenizer.encode(
-                        r"Question\n"
+                        "Question\n"
                         + pair["Title"]
                         + ". "
                         + pair["Question"]
-                        + r"\nAnswer:"
+                        + "\nAnswer:"
                         + pair["Answer"],
                         return_tensors="pt",
                     )[0]
@@ -55,10 +55,10 @@ class QADataset(Dataset):
     def __getitem__(self, idx):
         qa_pair = self.pairs[idx]
         if not self.train:
-            return r"Question\n" + qa_pair["Question"], qa_pair["Answer"]
+            return "Question\n" + qa_pair["Question"], qa_pair["Answer"]
         else:
             tokenized_dict = self.tokenizer(
-                r"Question\n" + qa_pair["Question"] + r"\nAnswer: " + qa_pair["Answer"],
+                "Question\n" + qa_pair["Question"] + "\nAnswer: " + qa_pair["Answer"],
                 truncation=True,
                 max_length=self.max_length,
                 padding=self.padding,
@@ -66,7 +66,7 @@ class QADataset(Dataset):
             )
 
             if self.zero_question_labels:
-                question_len = len(self.tokenizer.encode(r"Question\n" +qa_pair["Question"]+ r"\nAnswer: "))
+                question_len = len(self.tokenizer.encode("Question\n" +qa_pair["Question"]+ "\nAnswer: "))
                 labels = tokenized_dict["input_ids"].clone()
                 labels[-1][:question_len] = -100
             else:

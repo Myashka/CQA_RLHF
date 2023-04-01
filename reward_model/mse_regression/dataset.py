@@ -29,7 +29,7 @@ class QA_Reward_Dataset(Dataset):
             self.max_length = 0
             for pair in self.pairs:
                 sample_length = len(
-                    self.tokenizer.encode(r"Question\n"+ pair["Title"]+ ". "+ pair["Question"]+ r"\nAnswer:"+ pair["Answer"],
+                    self.tokenizer.encode("Question\n" + pair["Question"] + "\nAnswer:"+ pair["Answer"],
                         return_tensors="pt",
                     )[0]
                 )
@@ -46,7 +46,7 @@ class QA_Reward_Dataset(Dataset):
     def __getitem__(self, idx):
         qa_pair = self.pairs[idx]
         tokenized_dict = self.tokenizer(
-            r"Question\n" + qa_pair["Question"] + r"\nAnswer: " + qa_pair["Answer"],
+            "Question\n" + qa_pair["Question"] + "\nAnswer: " + qa_pair["Answer"],
             truncation=True,
             max_length=self.max_length,
             padding=self.padding,
