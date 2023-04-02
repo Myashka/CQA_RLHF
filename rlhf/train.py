@@ -1,5 +1,5 @@
 import os
-os.chdir('/content/trlx')
+os.chdir('/kaggle/working/trlx')
 from typing import List
 
 import torch
