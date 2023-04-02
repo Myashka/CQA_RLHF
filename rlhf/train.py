@@ -1,5 +1,6 @@
 import os
-os.chdir('/kaggle/working/trlx')
+import sys
+sys.path.append('/kaggle/working/trlx')
 from typing import List
 
 import torch
