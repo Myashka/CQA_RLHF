@@ -115,7 +115,10 @@ class GPTneo_Regressor(pl.LightningModule):
             num_warmup_steps=self.hparams.warmup_steps_per_cent * self.trainer.estimated_stepping_batches,
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
-        return [optimizer], [lr_scheduler]
+        return [optimizer], [{
+            'scheduler': lr_scheduler,
+            'interval': 'step',
+            'frequency': 1}]
     
     def freeze(self) -> None:
         # freeze all layers, except the final classifier layers
