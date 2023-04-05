@@ -34,8 +34,6 @@ def main(config_file):
     else:
         llm = LitLM(
         model_name=config["model_name"],
-        batch_size=config["data"]["batch_size"],
-        max_length=config["data"]["max_length"],
         **config["model_params"])
         
     wandb_logger = WandbLogger(

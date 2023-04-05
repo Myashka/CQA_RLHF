@@ -15,7 +15,7 @@ import gc
 
 
 class LitLM(pl.LightningModule):
-    def __init__(self, model_name, use_cache, batch_size=8, *args, **kwargs):
+    def __init__(self, model_name, use_cache, *args, **kwargs):
         super().__init__()
         self.save_hyperparameters()
         self.model = AutoModelForCausalLM.from_pretrained(
@@ -33,18 +33,8 @@ class LitLM(pl.LightningModule):
             nltk.download("punkt")
             self.rouge = ROUGEScore()
             self.bleu = SacreBLEUScore()
-            if self.hparams.do_compute_bertscore:
-                self.bertscore = BERTScore(lang="en")
 
         self._frozen = False
-
-        if self.hparams.do_freeze:
-            for n, p in self.model.named_parameters():
-                if "transformer.h" in n:
-                    layer_num = int(n.split(".")[2])
-                    if "ln_" not in n and layer_num > 0 and layer_num < 23:
-                        p.requires_grad = False
-            self._frozen = True
 
     def training_step(self, batch, batch_idx):
         output = self.model(**batch)
@@ -86,10 +76,6 @@ class LitLM(pl.LightningModule):
                 preds, skip_special_tokens=True)
             labels = self.tokenizer.batch_decode(
                 labels, skip_special_tokens=True)
-
-            if self.hparams.do_compute_bertscore:
-                self.bertscore(preds, labels)
-                self.log_dict("val_bert_score", self.bertscore)
 
             self.bleu.update(preds, [labels])
             bleu = self.bleu.compute()

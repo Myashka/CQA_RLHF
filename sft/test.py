@@ -81,11 +81,6 @@ def main(config_file):
         columns.append("rouge1_fmeasure")
         columns.append("rouge2_fmeasure")
         columns.append("rougeL_fmeasure")
-        if config['test_params']["do_compute_bertscore"]:
-            bertscore = BERTScore(lang="en")
-            columns.append("bert_f1")
-            columns.append("bert_precision")
-            columns.append("bert_recall")
 
     model.eval()
 
@@ -112,12 +107,6 @@ def main(config_file):
             test_sample.append(rouge_score["rouge1_fmeasure"].item())
             test_sample.append(rouge_score["rouge2_fmeasure"].item())
             test_sample.append(rouge_score["rougeL_fmeasure"].item())
-
-            if config['test_params']["do_compute_bertscore"]:
-                bert_score = bertscore(gen_answer, answer)
-                test_sample.append(bert_score["f1"])
-                test_sample.append(bert_score["precision"])
-                test_sample.append(bert_score["recall"])
 
         test_data.append(test_sample)
         assert test_data[-1] is not None, 'Something go wrong!'

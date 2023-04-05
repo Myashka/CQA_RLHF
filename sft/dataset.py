@@ -27,28 +27,6 @@ class QADataset(Dataset):
         self.max_length = max_length
         self.padding = padding
 
-        if self.max_length is None:
-
-            self.max_length = 0
-            for pair in self.pairs:
-                sample_length = len(
-                    self.tokenizer.encode(
-                        "Question\n"
-                        + pair["Title"]
-                        + ". "
-                        + pair["Question"]
-                        + "\nAnswer:"
-                        + pair["Answer"],
-                        return_tensors="pt",
-                    )[0]
-                )
-
-                if sample_length > self.max_length:
-                    self.max_length = sample_length
-
-                if self.max_length > 2048:
-                    self.max_length = 2048
-
     def __len__(self):
         return len(self.pairs)
 
