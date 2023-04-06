@@ -158,22 +158,21 @@ class LitLM(pl.LightningModule):
         print('Model freezed')
 
     def unfreeze(self) -> None:
-        if self._frozen:
-            for n, p in self.model.named_parameters():
-                if "transformer.h" in n:
-                    layer_num = int(n.split(".")[2])
-                    if "ln_" not in n and layer_num > 0 and layer_num < 23:
-                        p.requires_grad = True
+        for n, p in self.model.named_parameters():
+            if "transformer.h" in n:
+                layer_num = int(n.split(".")[2])
+                if "ln_" not in n and layer_num > 0 and layer_num < 23:
+                    p.requires_grad = True
 
-            self._frozen = False
-            print('Model unfreezed')
+        self._frozen = False
+        print('Model unfreezed')
 
     def on_train_epoch_start(self):
         """pytorch lightning hook"""
-        if self.current_epoch < self.hparams.nr_frozen_epochs:
+        if (self.current_epoch < self.hparams.nr_frozen_epochs) and not self._frozen:
             self.freeze()
 
-        if self.current_epoch >= self.hparams.nr_frozen_epochs:
+        if (self.current_epoch >= self.hparams.nr_frozen_epochs) and self._frozen:
             self.unfreeze()
 
     def generate(self, input_ids, attention_mask, device, **kwargs):
