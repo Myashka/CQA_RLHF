@@ -50,7 +50,7 @@ def prepare_inference(data_file_path,
                       padding_side,
                       padding):
     tokenizer.padding_side = padding_side
-    
+
     def promt_tokenize(examples):
         q_toks = tokenizer.encode(examples['Question'])
         q_toks = q_toks[: max_length-7]
@@ -58,14 +58,16 @@ def prepare_inference(data_file_path,
 
         tmp = 'Question: ' + tmp + "\nAnswer:"
 
-        tokenized_dict = tokenizer(tmp, padding=padding, max_length=max_length, truncation=True)
+        tokenized_dict = tokenizer(
+            tmp, padding=padding, max_length=max_length, truncation=True)
 
         return tokenized_dict
-    
+
     dataset = load_dataset(
         "json", data_files=f"{data_file_path}", field=f'{split}')['train']
     dataset = dataset.map(promt_tokenize)
-    dataset.set_format(type="torch", columns=['Question', 'Answer', "input_ids", "attention_mask"])
+    dataset.set_format(type="torch", columns=[
+                       'Question', 'Answer', "input_ids", "attention_mask"])
 
     return dataset
 
@@ -81,15 +83,18 @@ def prepare_dataloader_with_labels(dataset, tokenizer, batch_size, shuffle, on_t
                       collate_fn=lambda data: {
                           "input_ids": collate_batch(
                               [f["input_ids"] for f in data],
-                              tokenizer),
+                              tokenizer,
+                              max_length=max_length),
                           "attention_mask": collate_batch(
                               [f["attention_mask"] for f in data],
                               tokenizer,
                               "attention_mask",
+                              max_length=max_length
                           ),
                           "labels": collate_batch(
                               [f["labels"] for f in data],
-                              tokenizer
+                              tokenizer,
+                              max_length=max_length
                           ),
                       },
                       )
