@@ -53,12 +53,13 @@ def main(config_file):
     else:
         model = sft_model.LitLM(
             model_name=config["model_name"],
+            use_cache=config['test_params']["use_cache"],
         ).to(device)
 
     if config['test_params']["use_cache"]:
         model.model.config.use_cache = True
 
-    dm = QADataModule(config["model_name"], **config["data"])
+    dm = QADataModule(model_name=config["model_name"], **config["data"])
     dm.setup('test')
     test_dataset = dm.test_ds
 

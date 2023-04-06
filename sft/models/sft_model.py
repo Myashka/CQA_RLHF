@@ -26,7 +26,7 @@ class LitLM(pl.LightningModule):
         # self.model.config.pad_token_id = self.model.config.eos_token_id
         self.model.pad_token_id = self.tokenizer.eos_token_id
 
-        if self.hparams.do_compute_metrics:
+        if self.hparams.get("do_compute_metrics"):
             nltk.download("punkt")
             self.rouge = ROUGEScore()
             self.bleu = SacreBLEUScore()
@@ -49,9 +49,18 @@ class LitLM(pl.LightningModule):
         val_loss = output.loss
 
         preds = output.logits.argmax(dim=-1)
-        labels = batch["labels"]
+        labels = batch["input_ids"]
 
-        return {"loss": val_loss, "preds": preds, "labels": labels}
+        if self.hparams.do_compute_metrics:
+            preds = self.tokenizer.batch_decode(
+                preds, skip_special_tokens=True)
+            labels = self.tokenizer.batch_decode(
+                labels, skip_special_tokens=True)
+
+            self.bleu.update(preds, [labels])
+            self.rouge.update(preds, labels)
+
+        return {"loss": val_loss}
 
     def validation_epoch_end(self, outputs):
         val_loss = torch.stack([x["loss"] for x in outputs]).mean()
@@ -66,20 +75,9 @@ class LitLM(pl.LightningModule):
 
         if self.hparams.do_compute_metrics:
 
-            preds = torch.cat([output["preds"] for output in outputs], dim=0)
-            labels = torch.cat([output["labels"] for output in outputs], dim=0)
-
-            preds = self.tokenizer.batch_decode(
-                preds, skip_special_tokens=True)
-            labels = self.tokenizer.batch_decode(
-                labels, skip_special_tokens=True)
-
-            self.bleu.update(preds, [labels])
             bleu = self.bleu.compute()
             self.log("val_bleu", bleu, on_step=False,
                      on_epoch=True, sync_dist=True)
-
-            self.rouge.update(preds, labels)
             rouge = self.rouge.compute()
 
             self.log(
@@ -103,8 +101,6 @@ class LitLM(pl.LightningModule):
                 on_epoch=True,
                 sync_dist=True,
             )
-            del preds, labels,
-            gc.collect()
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
