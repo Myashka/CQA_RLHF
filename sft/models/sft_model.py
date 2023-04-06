@@ -1,5 +1,4 @@
 import torch
-from torch import nn
 import pytorch_lightning as pl
 from transformers import (
     AutoModelForCausalLM,
@@ -9,7 +8,6 @@ from transformers import (
 from torchmetrics.text.rouge import ROUGEScore
 from torchmetrics import SacreBLEUScore
 import nltk
-import numpy as np
 import gc
 
 
