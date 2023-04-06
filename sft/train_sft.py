@@ -60,7 +60,7 @@ def main(config_file):
             logger=wandb_logger,
             default_root_dir=os.getcwd(),
             callbacks=[checkpoint_callback, lr_monitor],
-            strategy=DeepSpeedStrategy(logging_batch_size_per_gpu=config["data"]["batch_size"]),
+            # strategy=DeepSpeedStrategy(logging_batch_size_per_gpu=config["data"]["batch_size"]),
             **config["trainer"]["params"],
         )
     else:
