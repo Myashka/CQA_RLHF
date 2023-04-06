@@ -27,7 +27,7 @@ def main(config_file):
 
     wandb.login(key=config["wandb"]["api"])
 
-    dm = QADataModule(config["model_name"], **config["data"])
+    dm = QADataModule(model_name=config["model_name"], **config["data"])
     if config["trainer"]["ckpt_path"]:
         llm = sft_model.LitLM.load_from_checkpoint(config["trainer"]["ckpt_path"], **config["model_params"])
     else:
