@@ -6,7 +6,6 @@ from transformers import (
     AutoTokenizer,
     get_linear_schedule_with_warmup,
 )
-from torchmetrics.text.bert import BERTScore
 from torchmetrics.text.rouge import ROUGEScore
 from torchmetrics import SacreBLEUScore
 import nltk

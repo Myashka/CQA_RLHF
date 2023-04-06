@@ -6,16 +6,16 @@ import yaml
 from yaml import CLoader
 import click
 from models import sft_model
-from torchmetrics.text.bert import BERTScore
 from torchmetrics.text.rouge import ROUGEScore
 from torchmetrics import SacreBLEUScore
 import nltk
-from data import data_module as dm
 import torch
 from tqdm.auto import tqdm
 import pandas as pd
 import os
 import gc
+
+from data.data_module import QADataModule
 
 
 def save_csv(data, columns, file_path):
@@ -58,7 +58,7 @@ def main(config_file):
     if config['test_params']["use_cache"]:
         model.model.config.use_cache = True
 
-    dm = dm.QADataModule(config["model_name"], **config["data"])
+    dm = QADataModule(config["model_name"], **config["data"])
     dm.setup('test')
     test_dataset = dm.test_ds
 
