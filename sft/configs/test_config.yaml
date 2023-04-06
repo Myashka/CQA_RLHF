@@ -1,26 +1,29 @@
 cuda: true
 data:
-  data_dir: /content/drive/MyDrive/Colab Notebooks/vkr_data/data/1.0-data-div-ans-sep.json
+  data_dir: /kaggle/input/python-qa-api-usage/1.0-data-div-ans-sep-api-usage.json
+  max_length: 512
+  padding: max_length
+  padding_side: right
+  split: test
+  truncate_promt: true
 generate_params:
   do_sample: true
   max_new_tokens: 512
+  no_repeat_ngram_size: 2
+  top_k: 50
   top_p: 0.9
-log_file: ''
-model_name: EleutherAI/gpt-neo-125M
-model_params:
-  do_freeze: false
-  use_cache: true
-save_steps: 100
+model_name: EleutherAI/gpt-neo-125m
 seed: 42
-test_model_path: null
 test_params:
-  do_compute_bertscore: false
   do_compute_metrics: true
+  log_file: /content/test-tuned-api_usage-answer_loss-bredogenerated-125M.csv
+  save_steps: 100
+  test_model_path: /content/artifacts/model-34980p14:v4/model.ckpt
+  use_cache: true
 wandb:
-  api: 60fce56bfaec85b8d6bc78bfac2086891f5afe54
+  api: text
   args:
     group: sft
     job_type: test
-    name: 125M-base-test
+    name: 125M-tuned-test-api_usage-answer_loss-bredogen
   project_name: CQA_RLHF
-  table_name: 125M-base

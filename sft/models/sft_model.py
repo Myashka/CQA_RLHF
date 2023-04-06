@@ -15,14 +15,14 @@ import gc
 
 
 class LitLM(pl.LightningModule):
-    def __init__(self, model_name, use_cache, *args, **kwargs):
+    def __init__(self, model_name, *args, **kwargs):
         super().__init__()
         self.save_hyperparameters()
         self.model = AutoModelForCausalLM.from_pretrained(
-            model_name, use_cache=use_cache
+            model_name, use_cache=self.hparams.use_cache
         )
 
-        self.tokenizer = AutoTokenizer.from_pretrained('EleutherAI/gpt-neo-125M')
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.model.resize_token_embeddings(len(self.tokenizer))
         # self.model.config.end_token_id = self.tokenizer.eos_token_id
@@ -137,7 +137,8 @@ class LitLM(pl.LightningModule):
 
         lr_scheduler = get_linear_schedule_with_warmup(
             optimizer=optimizer,
-            num_warmup_steps=int(self.hparams.warmup_steps_per_cent * self.trainer.estimated_stepping_batches),
+            num_warmup_steps=int(
+                self.hparams.warmup_steps_per_cent * self.trainer.estimated_stepping_batches),
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
         return [optimizer], [{
@@ -148,10 +149,10 @@ class LitLM(pl.LightningModule):
     def freeze(self) -> None:
         # freeze all layers, except the final classifier layers
         for n, p in self.model.named_parameters():
-                if "transformer.h" in n:
-                    layer_num = int(n.split(".")[2])
-                    if "ln_" not in n and layer_num > 0 and layer_num < 23:
-                        p.requires_grad = False
+            if "transformer.h" in n:
+                layer_num = int(n.split(".")[2])
+                if "ln_" not in n and layer_num > 0 and layer_num < 23:
+                    p.requires_grad = False
 
         self._frozen = True
         print('Model freezed')
@@ -175,12 +176,11 @@ class LitLM(pl.LightningModule):
         if self.current_epoch >= self.hparams.nr_frozen_epochs:
             self.unfreeze()
 
-    def generate(self, text: str, device, **kwargs):
-        inputs = self.tokenizer(text+r"\nAnswer: ", return_tensors="pt",
-                                truncation=True,
-                                max_length=512)
-        inputs = inputs.to(device)
-        generated_tokens = self.model.generate(**inputs, **kwargs)
+    def generate(self, input_ids, attention_mask, device, **kwargs):
+        gen_input = {'input_ids': input_ids.unsqueeze(0).to(device),
+                     'attention_mask': attention_mask.unsqueeze(0).to(device)
+                     }
+        generated_tokens = self.model.generate(**gen_input, **kwargs)
         generated_q_a = self.tokenizer.decode(
             generated_tokens[0], skip_special_tokens=True
         )

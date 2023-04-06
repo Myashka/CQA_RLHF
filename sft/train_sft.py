@@ -6,10 +6,9 @@ import wandb
 import yaml
 from yaml import CLoader
 import click
-from model import LitLM
-from data_module import QADataModule
+from models import sft_model
+from data import data_module as dm
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.callbacks.progress import TQDMProgressBar
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.strategies.deepspeed import DeepSpeedStrategy
 
@@ -28,11 +27,11 @@ def main(config_file):
 
     wandb.login(key=config["wandb"]["api"])
 
-    dm = QADataModule(config["model_name"], **config["data"])
+    dm = dm.QADataModule(config["model_name"], **config["data"])
     if config["trainer"]["ckpt_path"]:
-        llm = LitLM.load_from_checkpoint(config["trainer"]["ckpt_path"], **config["model_params"])
+        llm = sft_model.LitLM.load_from_checkpoint(config["trainer"]["ckpt_path"], **config["model_params"])
     else:
-        llm = LitLM(
+        llm = sft_model.LitLM(
         model_name=config["model_name"],
         **config["model_params"])
         
