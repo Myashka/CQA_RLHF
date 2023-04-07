@@ -115,7 +115,7 @@ def main(config_file):
 
         step_processed += 1
         if step_processed % config['test_params']['save_steps'] == 0:
-            save_csv(test_data, columns, config['log_file'])
+            save_csv(test_data, columns, config['test_params']['log_file'])
             test_data = []
             gc.collect()
 
