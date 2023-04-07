@@ -27,10 +27,8 @@ def prepare_train(
         sample = torch.tensor(q_toks + a_toks, dtype=int)
         sample = sample[:max_length]
         attention_mask = torch.ones(sample.shape, dtype=int)
-        labels = sample.clone()
-        labels[:len(q_toks)] = -100
 
-        return {'input_ids': sample, 'attention_mask': attention_mask, 'labels': labels}
+        return {'input_ids': sample, 'attention_mask': attention_mask, 'labels': examples['Score']}
 
     datasets = []
     for split in splits:
@@ -54,14 +52,15 @@ def prepare_inference(data_file_path,
 
     def promt_tokenize(examples):
 
+        a_toks_len = len(tokenizer.encode(examples['Answer']))
         if truncate_promt:
             q_toks = tokenizer.encode(examples['Question'])
-            q_toks = q_toks[: max_length-7]
+            q_toks = q_toks[:max_length - a_toks_len - 7]
             tmp = tokenizer.decode(q_toks).strip()
         else:
             tmp = examples['Question']
 
-        tmp = 'Question: ' + tmp + "\nAnswer:"
+        tmp = 'Question: ' + tmp + "\nAnswer: " + examples['Answer']
 
         tokenized_dict = tokenizer(
             tmp, padding=padding, max_length=max_length, truncation=True)
@@ -72,7 +71,7 @@ def prepare_inference(data_file_path,
         "json", data_files=f"{data_file_path}", field=f'{split}')['train']
     dataset = dataset.map(promt_tokenize)
     dataset.set_format(type="torch", columns=[
-                       'Question', 'Answer', "input_ids", "attention_mask"])
+                       'Question', 'Answer', 'Score', "input_ids", "attention_mask"])
 
     return dataset
 
@@ -96,11 +95,10 @@ def prepare_dataloader_with_labels(dataset, tokenizer, batch_size, shuffle, on_t
                               "attention_mask",
                               max_length=max_length
                           ),
-                          "labels": collate_batch(
+                          "labels": torch.tensor(
                               [f["labels"] for f in data],
-                              tokenizer,
-                              max_length=max_length
-                          ),
+
+                          )
                       },
                       )
 

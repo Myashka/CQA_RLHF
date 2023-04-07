@@ -1,27 +1,26 @@
-seed: 42
 cuda: true
+data:
+  data_dir: /kaggle/input/python-qa-api-usage/1.0-data-div-ans-sep-api-usage.json
+  max_length: 512
+  padding: false
+  padding_side: right
+  split: test
+  truncate_promt: true
+log_file: /content/test-base-125M.csv
+model_name: EleutherAI/gpt-neo-125m
+save_steps: 100
+seed: 42
+test_model_path: null
+test_params:
+  log_file: /content/test-tuned-api_usage-answer_loss-bredogenerated-125M.csv
+  save_steps: 100
+  test_model_path: /content/artifacts/model-34980p14:v4/model.ckpt
+  use_cache: true
 wandb:
   api: text
   args:
-    group: rewards
+    group: reward
     job_type: test
-    name: 1.3B-freezed-tpu-kaggle
+    name: 125M-base-test
   project_name: CQA_RLHF
-  table_name: test-modelname
-model_name: EleutherAI/gpt-neo-1.3B
-data:
-  data_dir: /kaggle/input/python-qa/1.0-data-div-ans-sep.json
-test_model_path: "checkpoint_path"
-model_params:
-  use_cache: true
-test_params:
-  do_compute_bertscore: false
-  do_compute_metrics: false
-generate_params:
-  do_sample: false
-  top_k: 50
-  top_p: 0.9
-  temperature: 0
-  num_return_sequences: 0
-  no_repeat_ngram_size: 2
-  max_new_tokens: 512
+  table_name: 125M-reward

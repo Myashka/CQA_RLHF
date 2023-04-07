@@ -6,10 +6,9 @@ import wandb
 import yaml
 from yaml import CLoader
 import click
-from model import GPTneo_Regressor
-from data_module import QA_Reward_DataModule
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from pytorch_lightning.callbacks.progress import TQDMProgressBar
+from models.reward_model import GPTneo_Regressor
+from data.data_module import QA_Reward_DataModule
+from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks import LearningRateMonitor
 
 
@@ -26,10 +25,9 @@ def main(config_file):
 
     wandb.login(key=config["wandb"]["api"])
 
-    dm = QA_Reward_DataModule(config["model_name"], **config["data"])
+    dm = QA_Reward_DataModule(model_name=config["model_name"], **config["data"])
     regressor = GPTneo_Regressor(
         model_name=config["model_name"],
-        batch_size=config["data"]["batch_size"],
         **config["model_params"],
     )
     wandb_logger = WandbLogger(
@@ -45,12 +43,6 @@ def main(config_file):
     )
 
     lr_monitor = LearningRateMonitor(logging_interval='step')
-    # earlystopping = EarlyStopping(monitor='val_loss', patience=5, mode='min')
-    # checkpoint_callback = ModelCheckpoint(
-    #     every_n_train_steps=config["trainer"]["checkpoint"]["every_n_train_steps"],
-    #     filename="gpt-neo-sft-{epoch:02d}-{global_step}",
-    #     dirpath=config["trainer"]["checkpoint"]["dirpath"],
-    # )
 
     trainer = pl.Trainer(
         logger=wandb_logger,

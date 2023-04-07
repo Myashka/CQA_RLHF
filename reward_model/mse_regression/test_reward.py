@@ -5,8 +5,8 @@ import wandb
 import yaml
 from yaml import CLoader
 import click
-from model import GPTneo_Regressor
-from data_module import QA_Reward_DataModule
+from models.reward_model import GPTneo_Regressor
+from data.data_module import QA_Reward_DataModule
 import os
 import torch
 from tqdm.auto import tqdm
@@ -24,6 +24,7 @@ def save_csv(data, columns, file_path):
         header = True
     df.to_csv(file_path, mode=mode, header=header)
 
+
 @click.command()
 @click.option("--config_file", default="config.yaml", help="Path to config YAML file")
 def main(config_file):
@@ -40,24 +41,24 @@ def main(config_file):
 
     wandb.login(key=config["wandb"]["api"])
 
-    if config["test_model_path"] is not None:
+    if config['test_params']["test_model_path"] is not None:
         model = GPTneo_Regressor.load_from_checkpoint(
-            config["test_model_path"]).to(device)
+            config['test_params']["test_model_path"]).to(device)
     else:
         model = GPTneo_Regressor(
             model_name=config["model_name"],
             **config["model_params"],
-            **config['test_params']
+            use_cache=config['test_params']["use_cache"],
         ).to(device)
 
-    if config["model_params"]["use_cache"]:
+    if config["test_params"]["use_cache"]:
         model.model.config.use_cache = True
 
     dm = QA_Reward_DataModule(
-        model_name=config["model_name"], data_dir=config["data"]["data_dir"], max_length=512, pad_for_tpu=True, batch_size=1)
-    
+        model_name=config["model_name"], *config['data'])
+
     dm.setup('test')
-    test_loader = dm.test_dataloader()
+    test_dataset = dm.test_df
 
     wandb_logger = WandbLogger(
         project=config["wandb"]["project_name"],
@@ -67,20 +68,22 @@ def main(config_file):
 
     wandb_logger.watch(model, log_graph=False)
 
-    columns = ["qa_pair", "target_score", "pred_score", 'mse']
+    columns = ["question", 'answer', "target_score", "pred_score", 'mse']
 
     model.model.eval()
 
     test_data = []
     step_processed = 0
-    for sample in tqdm(test_loader):
-        for key, value in sample.items():
-            sample[key] = sample[key].to(device)
+    for sample in tqdm(test_dataset):
+        model_input = {"input_ids": sample['input_ids'].to(device),
+                       "attention_mask": sample['attention_mask'].to(device),
+                       'labels': sample['Score'].to(device)}
         test_sample = []
-        model_output = model.model(**sample)
+        model_output = model.model(**model_input)
 
-        test_sample.append(model.tokenizer.batch_decode(sample['input_ids'], skip_special_tokens=True)[0])
-        test_sample.append(sample['labels'].cpu().detach().numpy()[0])
+        test_sample.append(sample['Question'])
+        test_sample.append(sample['Answer'])
+        test_sample.append(sample['Score'])
         test_sample.append(model_output.logits.cpu().detach().numpy()[0][0])
         test_sample.append(model_output.loss.item())
 
@@ -89,11 +92,11 @@ def main(config_file):
         test_data.append(test_sample)
 
         step_processed += 1
-        if step_processed % config['save_steps'] == 0:
-            save_csv(test_data, columns, config['log_file'])
+        if step_processed % config['test_params']['save_steps'] == 0:
+            save_csv(test_data, columns, config['test_params']['log_file'])
             test_data = []
 
-    save_csv(test_data, columns, config['log_file'])
+    save_csv(test_data, columns, config['test_params']['log_file'])
     # log the Table
     # wandb_logger.log_table(
     #     key=config['wandb']["table_name"], columns=columns, data=test_data)

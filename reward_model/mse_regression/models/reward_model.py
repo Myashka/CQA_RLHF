@@ -1,5 +1,4 @@
 import torch
-from torch import nn
 import pytorch_lightning as pl
 from transformers import (
     GPTNeoForSequenceClassification,
@@ -7,18 +6,17 @@ from transformers import (
     get_linear_schedule_with_warmup,
 )
 from torchmetrics.classification import BinaryAccuracy
-import numpy as np
 
 
 class GPTneo_Regressor(pl.LightningModule):
-    def __init__(self, model_name, use_cache, batch_size=8, *args, **kwargs):
+    def __init__(self, model_name, *args, **kwargs):
         super().__init__()
         self.save_hyperparameters()
         self.model = GPTNeoForSequenceClassification.from_pretrained(
-            model_name, use_cache=use_cache, num_labels=1
+            model_name, use_cache=self.hparams.use_cache, num_labels=1
         )
 
-        self.tokenizer = AutoTokenizer.from_pretrained('EleutherAI/gpt-neo-125M')
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model.resize_token_embeddings(len(self.tokenizer))
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.model.config.end_token_id = self.tokenizer.eos_token_id
@@ -27,15 +25,10 @@ class GPTneo_Regressor(pl.LightningModule):
 
         self.train_acc = BinaryAccuracy()
 
-        if self.hparams.do_compute_metrics:
+        if self.hparams.get("do_compute_metrics"):
             self.val_acc = BinaryAccuracy()
 
-        if self.hparams.do_freeze:
-            for n, p in self.model.named_parameters():
-                if "transformer.h" in n:
-                    layer_num = int(n.split(".")[2])
-                    if "ln_" not in n and layer_num > 0 and layer_num < 23:
-                        p.requires_grad = False
+        self.frozen = False
 
     def training_step(self, batch, batch_idx):
         output = self.model(**batch)
@@ -56,7 +49,8 @@ class GPTneo_Regressor(pl.LightningModule):
         outputs['preds'] = outputs['preds'].reshape((1, -1))[0]
         outputs['target'] = outputs['target'].reshape((1, -1))[0]
         self.train_acc(outputs['preds'], outputs['target'])
-        self.log('train_accuracy', self.train_acc, on_step=True, sync_dist=True)
+        self.log('train_accuracy', self.train_acc,
+                 on_step=False, on_epoch=True, sync_dist=True)
 
     def validation_step(self, batch, batch_idx):
         output = self.model(**batch)
@@ -112,40 +106,40 @@ class GPTneo_Regressor(pl.LightningModule):
 
         lr_scheduler = get_linear_schedule_with_warmup(
             optimizer=optimizer,
-            num_warmup_steps=self.hparams.warmup_steps_per_cent * self.trainer.estimated_stepping_batches,
+            num_warmup_steps=self.hparams.warmup_steps_per_cent *
+            self.trainer.estimated_stepping_batches,
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
         return [optimizer], [{
             'scheduler': lr_scheduler,
             'interval': 'step',
             'frequency': 1}]
-    
+
     def freeze(self) -> None:
         # freeze all layers, except the final classifier layers
         for n, p in self.model.named_parameters():
-                if "transformer.h" in n:
-                    layer_num = int(n.split(".")[2])
-                    if "ln_" not in n and layer_num > 0 and layer_num < 23:
-                        p.requires_grad = False
+            if "transformer.h" in n:
+                layer_num = int(n.split(".")[2])
+                if "ln_" not in n and layer_num > 0 and layer_num < 23:
+                    p.requires_grad = False
 
-        self._frozen = True
+        self.frozen = True
         print('Model freezed')
 
     def unfreeze(self) -> None:
-        if self._frozen:
-            for n, p in self.model.named_parameters():
-                if "transformer.h" in n:
-                    layer_num = int(n.split(".")[2])
-                    if "ln_" not in n and layer_num > 0 and layer_num < 23:
-                        p.requires_grad = True
+        for n, p in self.model.named_parameters():
+            if "transformer.h" in n:
+                layer_num = int(n.split(".")[2])
+                if "ln_" not in n and layer_num > 0 and layer_num < 23:
+                    p.requires_grad = True
 
-            self._frozen = False
-            print('Model unfreezed')
+        self.frozen = False
+        print('Model unfreezed')
 
     def on_train_epoch_start(self):
         """pytorch lightning hook"""
-        if self.current_epoch < self.hparams.nr_frozen_epochs:
+        if (self.current_epoch < self.hparams.nr_frozen_epochs) and not self.frozen:
             self.freeze()
 
-        if self.current_epoch >= self.hparams.nr_frozen_epochs:
+        if (self.current_epoch >= self.hparams.nr_frozen_epochs) and self.frozen:
             self.unfreeze()
