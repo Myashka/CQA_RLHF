@@ -80,7 +80,6 @@ config = TRLConfig(
             "max_new_tokens": 128,
             "min_new_tokens": 64,
         },
-        log_with='wandb',
     ),
 )
 

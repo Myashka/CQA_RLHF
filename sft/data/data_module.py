@@ -32,6 +32,8 @@ class QADataModule(pl.LightningDataModule):
                 split=self.hparams.split,
                 padding_side=self.hparams.padding_side,
                 padding=self.hparams.padding,
+                truncate_promt=self.hparams.truncate_promt,
+
             )
 
     def train_dataloader(self):
