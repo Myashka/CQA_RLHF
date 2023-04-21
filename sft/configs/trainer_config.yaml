@@ -11,10 +11,17 @@ model_params:
   - 0.95
   do_compute_metrics: true
   learning_rate: 2.0e-05
-  nr_frozen_epochs: 3
   use_cache: false
   warmup_steps_per_cent: 0.01
   weight_decay: 0.001
+  freeze_emb: true
+  freeze_ln: false
+  freeze_attn: false
+  freeze_ff: true
+  freeze_other: true
+  layers_not_to_freeze:
+  - 0
+  - 11
 seed: 42
 trainer:
   checkpoint:

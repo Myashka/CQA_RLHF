@@ -1,7 +1,7 @@
 data:
   batch_size: 8
-  data_dir: /kaggle/input/python-qa-api-usage/1.0-data-div-ans-sep-api-usage.json
-  max_length: 512
+  data_dir: /home/a_gorbatovski/CQA_RLHF/data/1.0-data-div-ans-sep-api-usage-with-gen.json
+  max_length: 1024
   on_tpu: false
   truncate_promt: true
 model_name: Myashka/125M_GPTneo_reward_base
@@ -11,10 +11,17 @@ model_params:
   - 0.95
   do_compute_metrics: true
   learning_rate: 2.0e-05
-  nr_frozen_epochs: 3
   use_cache: false
   warmup_steps_per_cent: 0.01
   weight_decay: 0.001
+  freeze_emb: true
+  freeze_ln: false
+  freeze_attn: false
+  freeze_ff: true
+  freeze_other: true
+  layers_not_to_freeze:
+  - 0
+  - 11
 seed: 42
 trainer:
   checkpoint:
@@ -24,19 +31,20 @@ trainer:
     mode: max
   ckpt_path: null
   params:
-    accelerator: tpu
+    accelerator: gpu
     accumulate_grad_batches: 1
     gradient_clip_val: 1
     log_every_n_steps: 20
-    max_epochs: 50
+    max_epochs: 20
     num_sanity_val_steps: 2
     overfit_batches: 0
     precision: '16'
-    val_check_interval: 104
+    strategy: ddp
+    val_check_interval: 767
 wandb:
-  api: text
+  api: 60fce56bfaec85b8d6bc78bfac2086891f5afe54
   args:
     group: reward
     job_type: train
-    name: 125M-lr_2e_5-1_ws-api_usage-freezed_3
+    name: 125M-lr_2e_5-1_ws-api_usage-with_bred
   project_name: CQA_RLHF

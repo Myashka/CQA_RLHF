@@ -31,7 +31,8 @@ class LitLM(pl.LightningModule):
             self.rouge = ROUGEScore()
             self.bleu = SacreBLEUScore()
 
-        self._frozen = False
+        self.frozen = False
+        self.freeze()
 
     def training_step(self, batch, batch_idx):
         output = self.model(**batch)
@@ -139,34 +140,53 @@ class LitLM(pl.LightningModule):
             'interval': 'step',
             'frequency': 1}]
 
-    def freeze(self) -> None:
-        # freeze all layers, except the final classifier layers
-        for n, p in self.model.named_parameters():
-            if "transformer.h" in n:
-                layer_num = int(n.split(".")[2])
-                if "ln_" not in n and layer_num > 0 and layer_num < 23:
-                    p.requires_grad = False
-
-        self._frozen = True
+    def freeze(self):
+        for name, p in self.model.named_parameters():
+            name = name.lower()
+            if 'transformer.h' in name and int(name.split('.')[3]) in self.hparams.layers_not_to_freeze:
+                continue
+            if 'ln' in name or 'norm' in name:
+                p.requires_grad = not self.hparams.freeze_ln
+            elif 'wte' in name or 'wpe' in name:
+                p.requires_grad = not self.hparams.freeze_emb
+            elif 'mlp' in name:
+                p.requires_grad = not self.hparams.freeze_ff
+            elif 'attn' in name:
+                p.requires_grad = not self.hparams.freeze_attn
+            else:
+                p.requires_grad = not self.hparams.freeze_other
+            
+        self.frozen = True
         print('Model freezed')
 
-    def unfreeze(self) -> None:
-        for n, p in self.model.named_parameters():
-            if "transformer.h" in n:
-                layer_num = int(n.split(".")[2])
-                if "ln_" not in n and layer_num > 0 and layer_num < 23:
-                    p.requires_grad = True
+    # def freeze(self) -> None:
+    #     # freeze all layers, except the final classifier layers
+    #     for n, p in self.model.named_parameters():
+    #         if "transformer.h" in n:
+    #             layer_num = int(n.split(".")[2])
+    #             if "ln_" not in n and layer_num > 0 and layer_num < 23:
+    #                 p.requires_grad = False
 
-        self._frozen = False
-        print('Model unfreezed')
+    #     self._frozen = True
+    #     print('Model freezed')
 
-    def on_train_epoch_start(self):
-        """pytorch lightning hook"""
-        if (self.current_epoch < self.hparams.nr_frozen_epochs) and not self._frozen:
-            self.freeze()
+    # def unfreeze(self) -> None:
+    #     for n, p in self.model.named_parameters():
+    #         if "transformer.h" in n:
+    #             layer_num = int(n.split(".")[2])
+    #             if "ln_" not in n and layer_num > 0 and layer_num < 23:
+    #                 p.requires_grad = True
 
-        if (self.current_epoch >= self.hparams.nr_frozen_epochs) and self._frozen:
-            self.unfreeze()
+    #     self._frozen = False
+    #     print('Model unfreezed')
+
+    # def on_train_epoch_start(self):
+    #     """pytorch lightning hook"""
+    #     if (self.current_epoch < self.hparams.nr_frozen_epochs) and not self._frozen:
+    #         self.freeze()
+
+    #     if (self.current_epoch >= self.hparams.nr_frozen_epochs) and self._frozen:
+    #         self.unfreeze()
 
     def generate(self, input_ids, attention_mask, device, **kwargs):
         gen_input = {'input_ids': input_ids.unsqueeze(0).to(device),

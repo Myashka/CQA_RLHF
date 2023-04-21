@@ -29,6 +29,7 @@ class GPTneo_Regressor(pl.LightningModule):
             self.val_acc = BinaryAccuracy()
 
         self.frozen = False
+        self.freeze()
 
     def training_step(self, batch, batch_idx):
         output = self.model(**batch)
@@ -114,32 +115,48 @@ class GPTneo_Regressor(pl.LightningModule):
             'scheduler': lr_scheduler,
             'interval': 'step',
             'frequency': 1}]
-
-    def freeze(self) -> None:
-        # freeze all layers, except the final classifier layers
-        for n, p in self.model.named_parameters():
-            if "transformer.h" in n:
-                layer_num = int(n.split(".")[2])
-                if "ln_" not in n and layer_num > 0 and layer_num < 23:
-                    p.requires_grad = False
-
+    
+    def freeze(self):
+        for name, p in self.model.named_parameters():
+            name = name.lower()
+            if 'transformer.h' in name and int(name.split('.')[3]) in self.hparams.layers_not_to_freeze:
+                continue
+            if 'ln' in name or 'norm' in name:
+                p.requires_grad = not self.hparams.freeze_ln
+            elif 'wte' in name or 'wpe' in name:
+                p.requires_grad = not self.hparams.freeze_emb
+            elif 'mlp' in name:
+                p.requires_grad = not self.hparams.freeze_ff
+            elif 'attn' in name:
+                p.requires_grad = not self.hparams.freeze_attn
+            else:
+                p.requires_grad = not self.hparams.freeze_other
+            
         self.frozen = True
         print('Model freezed')
+    
+    # def freeze(self) -> None:
+    #     # freeze all layers, except the final classifier layers
+    #     for n, p in self.model.named_parameters():
+    #         if "transformer.h" in n:
+    #             layer_num = int(n.split(".")[2])
+    #             if "ln_" not in n and layer_num > 0 and layer_num < 23:
+    #                 p.requires_grad = False
 
-    def unfreeze(self) -> None:
-        for n, p in self.model.named_parameters():
-            if "transformer.h" in n:
-                layer_num = int(n.split(".")[2])
-                if "ln_" not in n and layer_num > 0 and layer_num < 23:
-                    p.requires_grad = True
+    #     self.frozen = True
+    #     print('Model freezed')
 
-        self.frozen = False
-        print('Model unfreezed')
+    # def unfreeze(self) -> None:
+    #     for n, p in self.model.named_parameters():
+    #         if "transformer.h" in n:
+    #             layer_num = int(n.split(".")[2])
+    #             if "ln_" not in n and layer_num > 0 and layer_num < 23:
+    #                 p.requires_grad = True
 
-    def on_train_epoch_start(self):
-        """pytorch lightning hook"""
-        if (self.current_epoch < self.hparams.nr_frozen_epochs) and not self.frozen:
-            self.freeze()
+    #     self.frozen = False
+    #     print('Model unfreezed')
 
-        if (self.current_epoch >= self.hparams.nr_frozen_epochs) and self.frozen:
-            self.unfreeze()
+    # def on_train_epoch_start(self):
+    #     """pytorch lightning hook"""
+    #     if (self.current_epoch < self.hparams.nr_frozen_epochs) and not self.frozen:
+    #         self.freeze()
