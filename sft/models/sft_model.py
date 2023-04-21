@@ -143,7 +143,7 @@ class LitLM(pl.LightningModule):
     def freeze(self):
         for name, p in self.model.named_parameters():
             name = name.lower()
-            if 'transformer.h' in name and int(name.split('.')[3]) in self.hparams.layers_not_to_freeze:
+            if 'transformer.h' in name and int(name.split('.')[2]) in self.hparams.layers_not_to_freeze:
                 continue
             if 'ln' in name or 'norm' in name:
                 p.requires_grad = not self.hparams.freeze_ln
