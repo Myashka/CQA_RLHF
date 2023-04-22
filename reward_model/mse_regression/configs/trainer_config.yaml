@@ -1,6 +1,6 @@
 data:
-  batch_size: 8
-  data_dir: /home/a_gorbatovski/CQA_RLHF/data/1.0-data-div-ans-sep-api-usage-with-gen.json
+  batch_size: 16
+  data_dir: /root/CQA_RLHF/data/1.0-data-div-ans-sep-api-usage-with-gen.json
   max_length: 1024
   on_tpu: false
   truncate_promt: true
@@ -8,15 +8,15 @@ model_name: Myashka/125M_GPTneo_reward_base
 model_params:
   adam_betas:
   - 0.9
-  - 0.95
+  - 0.99
   do_compute_metrics: true
   learning_rate: 2.0e-05
   use_cache: false
   warmup_steps_per_cent: 0.01
   weight_decay: 0.001
   freeze_emb: true
-  freeze_ln: false
-  freeze_attn: false
+  freeze_ln: true
+  freeze_attn: true
   freeze_ff: true
   freeze_other: true
   layers_not_to_freeze:
@@ -40,11 +40,11 @@ trainer:
     overfit_batches: 0
     precision: '16'
     strategy: ddp
-    val_check_interval: 767
+    val_check_interval: 435
 wandb:
   api: 60fce56bfaec85b8d6bc78bfac2086891f5afe54
   args:
     group: reward
     job_type: train
-    name: 125M-lr_2e_5-1_ws-api_usage-with_bred
-  project_name: CQA_RLHF
+    name: 125M-lr_2e_5-1_ws-api_usage-16_bs-ddp
+  project_name: CQA_RLHF_v2
