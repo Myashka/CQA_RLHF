@@ -63,7 +63,7 @@ def prepare_inference(data_file_path,
         tmp = 'Question: ' + tmp + "\nAnswer: " + examples['Answer']
 
         tokenized_dict = tokenizer(
-            tmp, padding=padding, max_length=max_length, truncation=True)
+            [tmp], padding=padding, max_length=max_length, truncation=True)
 
         return tokenized_dict
 
