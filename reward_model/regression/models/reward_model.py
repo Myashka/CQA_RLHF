@@ -1,4 +1,5 @@
 import torch
+from torch.nn import L1Loss
 import pytorch_lightning as pl
 from transformers import (
     GPTNeoForSequenceClassification,
@@ -27,15 +28,21 @@ class GPTneo_Regressor(pl.LightningModule):
 
         if self.hparams.get("do_compute_metrics"):
             self.val_acc = BinaryAccuracy()
+        
+        if self.hparams.get('mae_loss'):
+            self.loss_fnc = L1Loss()
 
         self.frozen = False
         self.freeze()
 
     def training_step(self, batch, batch_idx):
         output = self.model(**batch)
+        loss = output.loss
+        if self.hparams.get('mae_loss'):
+            loss = self.loss_fnc(output.logits.squeeze(), batch['labels'].squeeze())
         self.log(
             "train_loss",
-            output.loss,
+            loss,
             logger=True,
             on_step=True,
             sync_dist=True,
@@ -43,7 +50,7 @@ class GPTneo_Regressor(pl.LightningModule):
 
         preds = (output.logits >= 0).int()
         y = (batch['labels'] >= 0).int()
-        return {'loss': output.loss, 'preds': preds, 'target': y}
+        return {'loss': loss, 'preds': preds, 'target': y}
 
     def training_step_end(self, outputs):
 
