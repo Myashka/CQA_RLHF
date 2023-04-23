@@ -1,26 +1,24 @@
 cuda: true
 data:
-  data_dir: /kaggle/input/python-qa-api-usage/1.0-data-div-ans-sep-api-usage.json
-  max_length: 512
+  data_dir: /root/CQA_RLHF/data/1.0-data-div-ans-sep-api-usage-with-gen.json
+  max_length: 1024
   padding: false
   padding_side: right
   split: test
   truncate_promt: true
-log_file: /content/test-base-125M.csv
 model_name: EleutherAI/gpt-neo-125m
 save_steps: 100
 seed: 42
-test_model_path: null
 test_params:
-  log_file: /content/test-tuned-api_usage-answer_loss-bredogenerated-125M.csv
+  log_file: /test-tuned-api_usage-125M-1024.csv
   save_steps: 100
-  test_model_path: /content/artifacts/model-34980p14:v4/model.ckpt
+  test_model_path: /root/CQA_RLHF/reward_model/mse_regression/CQA_RLHF_v2/30c0m8r9/checkpoints/epoch=16-step=1632.ckpt
   use_cache: true
 wandb:
   api: text
   args:
     group: reward
     job_type: test
-    name: 125M-base-test
-  project_name: CQA_RLHF
+    name: test-reward-125M-1024
+  project_name: CQA_RLHF_v2
   table_name: 125M-reward

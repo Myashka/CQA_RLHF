@@ -42,7 +42,7 @@ trainer:
     strategy: ddp
     val_check_interval: 435
 wandb:
-  api: 60fce56bfaec85b8d6bc78bfac2086891f5afe54
+  api: text
   args:
     group: reward
     job_type: train

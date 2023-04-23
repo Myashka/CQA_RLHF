@@ -55,10 +55,10 @@ def main(config_file):
         model.model.config.use_cache = True
 
     dm = QA_Reward_DataModule(
-        model_name=config["model_name"], *config['data'])
+        model_name=config["model_name"], **config['data'])
 
     dm.setup('test')
-    test_dataset = dm.test_df
+    test_dataset = dm.test_ds
 
     wandb_logger = WandbLogger(
         project=config["wandb"]["project_name"],
