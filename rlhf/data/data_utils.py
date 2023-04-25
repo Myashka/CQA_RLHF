@@ -38,7 +38,7 @@ def build_dataset(
         dataset = load_dataset(
             "json", data_files=f"{data_config['data_file_path']}", field=f'{split}')['train']
         dataset = dataset.map(promt_tokenize)
-        dataset.set_format(type="torch", columns=["input_ids", "question_promt"])
+        dataset.set_format(type="torch", columns=["input_ids", "query"])
         datasets.append(dataset)
     return datasets
 
