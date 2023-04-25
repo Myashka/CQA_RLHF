@@ -7,6 +7,7 @@ from transformers import AutoTokenizer
 from trl import PPOTrainer, PPOConfig, AutoModelForCausalLMWithValueHead, set_seed
 from data.data_utils import build_dataset, collator
 from reward_pipelines.regression_reward import Reward_pipeline
+from training_utils.freeze import freeze_model
 
 import yaml
 from yaml import CLoader
@@ -35,6 +36,8 @@ def main(config_file):
     ref_model = AutoModelForCausalLMWithValueHead.from_pretrained(config.model_name)
     tokenizer = AutoTokenizer.from_pretrained(config.model_name)
     tokenizer.pad_token = tokenizer.eos_token
+
+    model = freeze_model(model, args_config['freeze_config'])
 
     ppo_trainer = PPOTrainer(config, model, ref_model, tokenizer, dataset=dataset, data_collator=collator, num_shared_layers=None)
 

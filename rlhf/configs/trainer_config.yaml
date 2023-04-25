@@ -1,22 +1,22 @@
 data_config:
-  data_file_path: /content/drive/MyDrive/Colab Notebooks/vkr_data/data/1.0-data-div-ans-sep-api-usage.json
+  data_file_path: /root/CQA_RLHF/data/1.0-data-div-ans-sep-api-usage.json
   max_length: 1024
   max_length_promt: 512
   padding: false
   truncate_promt: true
 ppo_config:
-  batch_size: 4
+  batch_size: 256
   gradient_accumulation_steps: 1
   learning_rate: 1.41e-05
   log_with: wandb
-  max_grad_norm: null
+  # max_grad_norm: null
   model_name: Myashka/125M_GPTneo_sft_tuned
   optimize_cuda_cache: true
   ppo_epochs: 4
   seed: 42
   steps: 20000
-  tracker_project_name: CQA_RLHF
+  tracker_project_name: CQA_RLHF_v2
 reward_config:
-  batch_size: 2
+  batch_size: 16
   model_name: Myashka/125M_GPTneo_reward_gen
 hf_hub_name: Myashka/125M_GPTneo_ppo_tune

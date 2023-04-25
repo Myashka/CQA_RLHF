@@ -40,6 +40,7 @@ def main(config_file):
     checkpoint_callback = ModelCheckpoint(
         monitor=config["trainer"]["checkpoint"]['log_obg'],
         mode=config["trainer"]["checkpoint"]['mode'],
+        # save_weights_only=True,
     )
 
     lr_monitor = LearningRateMonitor(logging_interval='step')
