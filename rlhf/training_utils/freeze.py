@@ -1,7 +1,7 @@
 def freeze_model(model, config):
     for name, p in model.named_parameters():
         name = name.lower()
-        if 'transformer.h' in name and int(name.split('.')[2]) in config['layers_not_to_freeze']:
+        if 'transformer.h' in name and int(name.split('.')[3]) in config['layers_not_to_freeze']:
             p.requires_grad = True
             continue
         if 'ln' in name or 'norm' in name:

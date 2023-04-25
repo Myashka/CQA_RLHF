@@ -24,7 +24,7 @@ def build_dataset(
         tokenized_dict = tokenizer(
             sample, padding=data_config['padding'], max_length=data_config['max_length_promt'], truncation=True)
         
-        tokenized_dict['question_promt'] = sample
+        tokenized_dict['query'] = sample
 
         # sample = torch.tensor(tokenized_dict['input_ids'] + a_toks, dtype=int)
         # sample = sample[:data_config['max_length']]
