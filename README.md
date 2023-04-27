@@ -2,7 +2,7 @@
 
 ## Descpription
 
-This GitHub repository is a collection of code and resources that correspond to CQA (Closed-Question Answering) and RLHF (Response-Likelihood Heuristic Filter) methods dedicated to the diploma work at ITMO University. The main focus of this repository is on fine-tuning the GPT-Neo model for CQA tasks.
+This GitHub repository is a collection of code and resources that correspond to CQA (Closed-Question Answering) and RLHF (Reinforcement Learning from Human Feedback) methods dedicated to the diploma work at ITMO University. The main focus of this repository is on fine-tuning the GPT-Neo model for CQA tasks.
 
 Repository Structure:
 The repository is organized into several directories to make it easy for users to navigate and find the relevant code and resources. The directories include:
