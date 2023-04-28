@@ -2,7 +2,7 @@ cuda: true
 data:
   data_dir: /kaggle/input/python-qa-api-usage/1.0-data-div-ans-sep-api-usage.json
   max_length: 512
-  padding: max_length
+  padding: true
   padding_side: right
   split: test
   truncate_promt: true
