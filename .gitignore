@@ -9,3 +9,4 @@
 /mse_regression copy
 artifacts
 test_results
+*.csv
