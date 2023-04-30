@@ -32,7 +32,8 @@ class LitLM(pl.LightningModule):
             self.bleu = SacreBLEUScore()
 
         self.frozen = False
-        self.freeze()
+        if self.hparams.get("do_freeze"):
+            self.freeze()
 
     def training_step(self, batch, batch_idx):
         output = self.model(**batch)

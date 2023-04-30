@@ -14,6 +14,7 @@ model_params:
   use_cache: false
   warmup_steps_per_cent: 0.01
   weight_decay: 0.001
+  do_freeze: true
   freeze_emb: true
   freeze_ln: false
   freeze_attn: false
