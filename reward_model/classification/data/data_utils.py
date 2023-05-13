@@ -34,7 +34,7 @@ def prepare_train(
         k_sample = k_sample[:max_length]
         k_attention_mask = torch.ones(k_sample.shape, dtype=int)
 
-        return {'input_ids_j': j_sample, 'attention_mask_j': j_attention_mask, 'input_ids_k': k_sample, 'attention_mask_j': k_attention_mask}
+        return {'input_ids_j': j_sample, 'attention_mask_j': j_attention_mask, 'input_ids_k': k_sample, 'attention_mask_k': k_attention_mask}
 
     datasets = []
     for split in splits:
@@ -42,7 +42,7 @@ def prepare_train(
             "json", data_files=f"{data_file_path}", field=f'{split}')['train']
         dataset = dataset.map(promt_tokenize)
         dataset.set_format(type="torch", columns=[
-                           "input_ids_j", "attention_mask_j", "input_ids_k", 'attention_mask_j'])
+                           "input_ids_j", "attention_mask_j", "input_ids_k", 'attention_mask_k'])
         datasets.append(dataset)
     return datasets
 

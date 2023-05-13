@@ -6,7 +6,6 @@ from transformers import (
     AutoTokenizer,
     get_linear_schedule_with_warmup,
 )
-from torchmetrics.classification import BinaryAccuracy
 
 
 class GPTneo_Regressor(pl.LightningModule):
@@ -45,7 +44,7 @@ class GPTneo_Regressor(pl.LightningModule):
     def training_step_end(self, outputs):
         outputs['j_rewards'] = outputs['j_rewards'].reshape((1, -1))[0]
         outputs['k_rewards'] = outputs['k_rewards'].reshape((1, -1))[0]
-        train_acc = sum(outputs['j_rewards'] > outputs['k_rewards'])/len(outputs['k_rewards'])
+        train_acc = sum(outputs['j_rewards'] > outputs['k_rewards']).item()/len(outputs['k_rewards'])
         self.log('train_accuracy', train_acc,
                  on_step=True, on_epoch=False, sync_dist=True)
 
@@ -68,7 +67,7 @@ class GPTneo_Regressor(pl.LightningModule):
     def validation_step_end(self, outputs):
         outputs['j_rewards'] = outputs['j_rewards'].reshape((1, -1))[0]
         outputs['k_rewards'] = outputs['k_rewards'].reshape((1, -1))[0]
-        val_acc = sum(outputs['j_rewards'] > outputs['k_rewards'])/len(outputs['k_rewards'])
+        val_acc = sum(outputs['j_rewards'] > outputs['k_rewards']).item()/len(outputs['k_rewards'])
 
         self.log('val_accuracy', val_acc, on_step=False,
                     on_epoch=True, sync_dist=True)
