@@ -1,6 +1,6 @@
 data:
   batch_size: 16
-  data_dir: /root/CQA_RLHF/data/1.0-data-div-ans-sep-api-usage-with-gen.json
+  data_dir: /root/CQA_RLHF/data/1.0-data-api-usage-contrast-with-gen.json
   max_length: 1024
   max_prompt_length: 512
   on_tpu: false
