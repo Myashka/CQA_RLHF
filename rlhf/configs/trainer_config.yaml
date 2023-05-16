@@ -1,22 +1,44 @@
 data_config:
   data_file_path: /root/CQA_RLHF/data/1.0-data-div-ans-sep-api-usage.json
-  max_length: 1024
-  max_length_promt: 512
+  max_length_promt: 256
   padding: false
   truncate_promt: true
+freeze_config:
+  freeze_attn: true
+  freeze_emb: true
+  freeze_ff: true
+  freeze_ln: true
+  freeze_other: false
+  layers_not_to_freeze:
+  - 0
+generation_kwargs:
+  do_sample: true
+  max_new_tokens: 256
+  min_length: -1
+  top_k: 0.0
+  top_p: 1.0
+global_epoches: 10
+hf_hub_name: Myashka/125M_GPTneo_ppo_tune
 ppo_config:
-  batch_size: 256
+  batch_size: 64
+  forward_batch_size: 8
   gradient_accumulation_steps: 1
   learning_rate: 1.41e-05
   log_with: wandb
-  # max_grad_norm: null
+  max_grad_norm: null
   model_name: Myashka/125M_GPTneo_sft_tuned
   optimize_cuda_cache: true
   ppo_epochs: 4
+  remove_unused_columns: false
   seed: 42
   steps: 20000
+  tracker_kwargs:
+    group: rl_ppo
+    name: ppo-train-bs_64-mbs_8-fr_0-256-256
   tracker_project_name: CQA_RLHF_v2
 reward_config:
-  batch_size: 16
-  model_name: Myashka/125M_GPTneo_reward_gen
-hf_hub_name: Myashka/125M_GPTneo_ppo_tune
+  batch_size: 8
+  reward_model_name: Myashka/125M_GPTneo_reward_gen
+save_config:
+  checkpoint_dir: /ckpts_ppo
+  save_interval: 32

@@ -1,7 +1,7 @@
 data:
-  batch_size: 16
+  batch_size: 8
   data_dir: /root/CQA_RLHF/data/1.0-data-api-usage-contrast-with-gen.json
-  max_length: 1024
+  max_length: 768
   max_prompt_length: 512
   on_tpu: false
   truncate_promt: true
@@ -18,17 +18,17 @@ model_params:
   freeze_ln: true
   freeze_attn: true
   freeze_ff: true
-  freeze_other: true
+  freeze_other: false
   layers_not_to_freeze:
   - 0
   - 11
 seed: 42
 trainer:
   checkpoint:
-    # dirpath: /kaggle/working/Checkpoints
+    dirpath: /kaggle/working/Checkpoints
     # every_n_train_steps: 1000
-    log_obg: val_loss
-    mode: min
+    monitor: val_accuracy
+    mode: max
   ckpt_path: null
   params:
     accelerator: gpu
@@ -46,5 +46,5 @@ wandb:
   args:
     group: reward
     job_type: train
-    name: contrast-125M-lr_2e_5-1_ws-api_usage-16_bs-ddp
+    name: contrast-125M-lr_3e_5-1_ws-api_usage-8_bs-ddp-not_fr_other_0_11
   project_name: CQA_RLHF_v2

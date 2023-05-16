@@ -32,15 +32,14 @@ def main(config_file):
     )
     wandb_logger = WandbLogger(
         project=config["wandb"]["project_name"],
-        log_model="all",
+        log_model=True,
         **config["wandb"]["args"],
     )
 
     wandb_logger.watch(regressor, log_graph=False)
     checkpoint_callback = ModelCheckpoint(
-        monitor=config["trainer"]["checkpoint"]['log_obg'],
-        mode=config["trainer"]["checkpoint"]['mode'],
         save_weights_only=True,
+        **config["trainer"]["checkpoint"]
     )
 
     lr_monitor = LearningRateMonitor(logging_interval='step')

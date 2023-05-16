@@ -15,6 +15,7 @@ from reward_pipelines.regression_reward import Reward_pipeline
 import yaml
 from yaml import CLoader
 import click
+import gc
 
 
 
@@ -59,45 +60,62 @@ def main(config_file):
     if ppo_trainer.accelerator.num_processes == 1:
         device = 0 if torch.cuda.is_available() else "cpu"  # to avoid a `pipeline` bug
 
-    reward_pipe = Reward_pipeline(reward_config['model_name'], device)
+    reward_pipe = Reward_pipeline(reward_config['model_name'], ppo_trainer.accelerator)
 
     
-    run = wandb.init(reinit=False)
+    if ppo_trainer.accelerator.is_local_main_process:
+        run = wandb.init(reinit=False)
 
     generation_kwargs["pad_token_id"] = tokenizer.eos_token_id
     best_reward = -100
 
 
-    for epoch, batch in tqdm(enumerate(ppo_trainer.dataloader)):
-        query_tensors = batch["input_ids"]
-        response_tensors = []
+    global_epoches = args_config['global_epoches']
 
-        for query in query_tensors:
-            response = ppo_trainer.generate(query, **generation_kwargs)
-            response_tensors.append(response.squeeze())
-        # batch["question_answer"] = tokenizer.batch_decode(response_tensors, skip_special_tokens=True)
-        # batch["query"] = [tokenizer.decode(query_idx, skip_special_tokens=True) for query_idx in batch["input_ids"]]
-        batch["response"] = [tokenizer.decode(r.squeeze()[len(query_idx):], skip_special_tokens=True) for r, query_idx in zip(response_tensors, batch["input_ids"])]
 
-        #### Compute sentiment score
-        texts = [q + r for q, r in zip(batch["query"], batch["response"])]
-        rewards = reward_pipe(texts, reward_config['batch_size'])
+    for global_epo in tqdm(range(global_epoches)):
+        for epoch, batch in tqdm(enumerate(ppo_trainer.dataloader)):
+            query_tensors = batch["input_ids"]
+            response_tensors = []
 
-        #### Run PPO step
-        stats = ppo_trainer.step(query_tensors, response_tensors, rewards)
-        ppo_trainer.log_stats(stats, batch, rewards)
+            for query in query_tensors:
+                response = ppo_trainer.generate(query, **generation_kwargs)
+                response_tensors.append(response.squeeze())
+            # batch["question_answer"] = tokenizer.batch_decode(response_tensors, skip_special_tokens=True)
+            # batch["query"] = [tokenizer.decode(query_idx, skip_special_tokens=True) for query_idx in batch["input_ids"]]
+            batch["response"] = [tokenizer.decode(r.squeeze()[len(query_idx):], skip_special_tokens=True) for r, query_idx in zip(response_tensors, batch["input_ids"])]
 
-        mean_reward = torch.mean(torch.tensor(rewards))
+            #### Compute sentiment score
+            texts = [q + r for q, r in zip(batch["query"], batch["response"])]
+            rewards = reward_pipe(texts, reward_config['batch_size'])
 
-        if (epoch + 1) % save_config['save_interval'] == 0:
-            save_checkpoint(ppo_trainer.model, run, epoch, mean_reward, save_config['checkpoint_dir'], 'ppo_checkpoint')
+            #### Run PPO step
+            stats = ppo_trainer.step(query_tensors, response_tensors, rewards)
+            ppo_trainer.log_stats(stats, batch, rewards)
 
-        if mean_reward > best_reward:
-            save_checkpoint(ppo_trainer.model, run, epoch, mean_reward, save_config['checkpoint_dir'], 'max_reward_ppo')
+            mean_reward = torch.mean(torch.tensor(rewards))
 
-            best_reward = mean_reward
+            del batch
+            del rewards
+            gc.collect()
+            torch.cuda.empty_cache()
 
-    save_checkpoint(ppo_trainer.model, run, epoch, mean_reward, save_config['checkpoint_dir'], 'last_checkpoint')
+            if (epoch + 1) % save_config['save_interval'] == 0:
+                ppo_trainer.accelerator.wait_for_everyone()
+                unwrapped_model = ppo_trainer.accelerator.unwrap_model(ppo_trainer.model)
+                save_checkpoint(unwrapped_model, run, epoch, mean_reward, save_config['checkpoint_dir'], 'ppo_checkpoint')
+
+            if mean_reward > best_reward:
+                ppo_trainer.accelerator.wait_for_everyone()
+                unwrapped_model = ppo_trainer.accelerator.unwrap_model(ppo_trainer.model)
+                save_checkpoint(unwrapped_model, run, global_epo, epoch, mean_reward, save_config['checkpoint_dir'], 'max_reward_ppo')
+
+                best_reward = mean_reward
+            
+        ppo_trainer.accelerator.wait_for_everyone()
+        unwrapped_model = ppo_trainer.accelerator.unwrap_model(ppo_trainer.model)
+        save_checkpoint(unwrapped_model, run, epoch, mean_reward, save_config['checkpoint_dir'], 'last_checkpoint')
+        
     
     ppo_trainer.model.push_to_hub(args_config['hf_hub_name'])
 

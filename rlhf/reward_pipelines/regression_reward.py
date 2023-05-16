@@ -2,15 +2,15 @@ import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 class Reward_pipeline:
-    def __init__(self, model_name, device):
+    def __init__(self, model_name, accelerator):
         self.model_name = model_name
-        self.device = device
 
         self.reward_model = AutoModelForSequenceClassification.from_pretrained(model_name)
         self.reward_tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.reward_tokenizer.pad_token = self.reward_tokenizer.eos_token
 
-        self.reward_model = self.reward_model.to(device)
+        self.reward_model = accelerator.prepare(self.reward_model)
+        self.reward_tokenizer = accelerator.prepare(self.reward_tokenizer)
     
     def __call__(self, input_texts, batch_size):
       return self.get_rewards(input_texts, batch_size)
