@@ -11,7 +11,7 @@ freeze_config:
   freeze_other: false
   layers_not_to_freeze:
   - 0
-generation_kwargs:
+generation_config:
   do_sample: true
   max_new_tokens: 256
   min_length: -1

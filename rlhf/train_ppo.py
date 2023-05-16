@@ -103,7 +103,7 @@ def main(config_file):
             if (epoch + 1) % save_config['save_interval'] == 0:
                 ppo_trainer.accelerator.wait_for_everyone()
                 unwrapped_model = ppo_trainer.accelerator.unwrap_model(ppo_trainer.model)
-                save_checkpoint(unwrapped_model, run, epoch, mean_reward, save_config['checkpoint_dir'], 'ppo_checkpoint')
+                save_checkpoint(unwrapped_model, run, global_epo, epoch, mean_reward, save_config['checkpoint_dir'], 'ppo_checkpoint')
 
             if mean_reward > best_reward:
                 ppo_trainer.accelerator.wait_for_everyone()
@@ -114,7 +114,7 @@ def main(config_file):
             
         ppo_trainer.accelerator.wait_for_everyone()
         unwrapped_model = ppo_trainer.accelerator.unwrap_model(ppo_trainer.model)
-        save_checkpoint(unwrapped_model, run, epoch, mean_reward, save_config['checkpoint_dir'], 'last_checkpoint')
+        save_checkpoint(unwrapped_model, run, global_epo, epoch, mean_reward, save_config['checkpoint_dir'], 'last_checkpoint')
         
     
     ppo_trainer.model.push_to_hub(args_config['hf_hub_name'])
