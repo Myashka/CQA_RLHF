@@ -60,7 +60,7 @@ def main(config_file):
     if ppo_trainer.accelerator.num_processes == 1:
         device = 0 if torch.cuda.is_available() else "cpu"  # to avoid a `pipeline` bug
 
-    reward_pipe = Reward_pipeline(reward_config['model_name'], ppo_trainer.accelerator)
+    reward_pipe = Reward_pipeline(reward_config['reward_model_name'], ppo_trainer.accelerator)
 
     
     if ppo_trainer.accelerator.is_local_main_process:
