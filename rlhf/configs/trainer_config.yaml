@@ -21,7 +21,7 @@ generation_config:
 global_epoches: 10
 hf_hub_name: Myashka/125M_GPTneo_ppo_tune
 ppo_config:
-  batch_size: 64 * n_gpus
+  batch_size: 64
   forward_batch_size: 16
   gradient_accumulation_steps: 1
   learning_rate: 1.41e-05

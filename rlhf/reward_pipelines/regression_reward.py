@@ -38,12 +38,16 @@ class Reward_pipeline:
         for batch in dataloader:            
             outputs = self.reward_model(**batch).logits
             
-            batch_predictions = outputs.detach().cpu()
-            predictions.extend(batch_predictions)
+            # batch_predictions = outputs.detach().cpu()
+            # predictions.extend(batch_predictions)
+
+            batch_predictions = outputs.detach()
+            batch_predictions = self.accelerator.gather(batch_predictions)
+            predictions.append(batch_predictions.cpu())
         
         predictions = torch.cat(predictions, dim=0)
         
-        return list(predictions)
+        return predictions.tolist()
     
     def collate_fn(self, batch):
         input_ids = [torch.tensor(e[0], dtype=torch.long) for e in batch]
