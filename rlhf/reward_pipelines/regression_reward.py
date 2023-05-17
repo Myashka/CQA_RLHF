@@ -47,7 +47,7 @@ class Reward_pipeline:
         
         predictions = torch.cat(predictions, dim=0)
         
-        return predictions.tolist()
+        return list(predictions)
     
     def collate_fn(self, batch):
         input_ids = [torch.tensor(e[0], dtype=torch.long) for e in batch]

@@ -54,7 +54,9 @@ def main(config_file):
 
     tokenizer.pad_token = tokenizer.eos_token
 
+    print('Trainer start')
     ppo_trainer = PPOTrainer(config, model, ref_model, tokenizer, dataset=dataset, data_collator=collator, num_shared_layers=None)
+    print('Trainer done')
 
     device = ppo_trainer.accelerator.device
     if ppo_trainer.accelerator.num_processes == 1:
@@ -63,8 +65,7 @@ def main(config_file):
     reward_pipe = Reward_pipeline(reward_config['reward_model_name'], ppo_trainer.accelerator)
 
     
-    if ppo_trainer.accelerator.is_local_main_process:
-        run = wandb.init(reinit=False)
+    wandb_tracker = ppo_trainer.accelerator.get_tracker("wandb", unwrap=True)
 
     generation_kwargs["pad_token_id"] = tokenizer.eos_token_id
     best_reward = -100
@@ -102,22 +103,26 @@ def main(config_file):
 
             if (epoch + 1) % save_config['save_interval'] == 0:
                 ppo_trainer.accelerator.wait_for_everyone()
-                unwrapped_model = ppo_trainer.accelerator.unwrap_model(ppo_trainer.model)
-                save_checkpoint(unwrapped_model, run, global_epo, epoch, mean_reward, save_config['checkpoint_dir'], 'ppo_checkpoint')
+                if ppo_trainer.accelerator.is_main_process:
+                    unwrapped_model = ppo_trainer.accelerator.unwrap_model(ppo_trainer.model)
+                    save_checkpoint(unwrapped_model, wandb_tracker, global_epo, epoch, mean_reward, save_config['checkpoint_dir'], 'ppo_checkpoint', config.tracker_kwargs['name'])
 
             if mean_reward > best_reward:
                 ppo_trainer.accelerator.wait_for_everyone()
-                unwrapped_model = ppo_trainer.accelerator.unwrap_model(ppo_trainer.model)
-                save_checkpoint(unwrapped_model, run, global_epo, epoch, mean_reward, save_config['checkpoint_dir'], 'max_reward_ppo')
+                if ppo_trainer.accelerator.is_main_process:
+                    unwrapped_model = ppo_trainer.accelerator.unwrap_model(ppo_trainer.model)
+                    save_checkpoint(unwrapped_model, wandb_tracker, global_epo, epoch, mean_reward, save_config['checkpoint_dir'], 'max_reward_ppo', config.tracker_kwargs['name'])
 
                 best_reward = mean_reward
             
         ppo_trainer.accelerator.wait_for_everyone()
-        unwrapped_model = ppo_trainer.accelerator.unwrap_model(ppo_trainer.model)
-        save_checkpoint(unwrapped_model, run, global_epo, epoch, mean_reward, save_config['checkpoint_dir'], 'last_checkpoint')
+        if ppo_trainer.accelerator.is_main_process:
+            unwrapped_model = ppo_trainer.accelerator.unwrap_model(ppo_trainer.model)
+            save_checkpoint(unwrapped_model, wandb_tracker, global_epo, epoch, mean_reward, save_config['checkpoint_dir'], 'last_checkpoint', config.tracker_kwargs['name'])
         
-    
-    ppo_trainer.model.push_to_hub(args_config['hf_hub_name'])
+    ppo_trainer.accelerator.wait_for_everyone()
+    if ppo_trainer.accelerator.is_main_process:
+        ppo_trainer.model.push_to_hub(args_config['hf_hub_name'])
 
 if __name__ == "__main__":
     main()

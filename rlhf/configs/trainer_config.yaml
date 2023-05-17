@@ -18,7 +18,7 @@ generation_config:
   min_length: -1
   top_k: 0.0
   top_p: 1.0
-global_epoches: 10
+global_epoches: 30
 hf_hub_name: Myashka/125M_GPTneo_ppo_tune
 ppo_config:
   batch_size: 64
@@ -35,7 +35,7 @@ ppo_config:
   steps: 6948
   tracker_kwargs:
     group: rl_ppo
-    name: ppo-train-bs_64-mbs_8-fr_0-256-256-contrast
+    name: ppo-train-bs_64-mbs_16-not_fr_0_11_other-256-256-contrast
   tracker_project_name: CQA_RLHF_v2
 reward_config:
   batch_size: 8
