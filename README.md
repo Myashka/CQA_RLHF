@@ -2,13 +2,63 @@
 
 ## Descpription
 
-This GitHub repository is a collection of code and resources that correspond to CQA (Closed-Question Answering) and RLHF (Reinforcement Learning from Human Feedback) methods dedicated to the diploma work at ITMO University. The main focus of this repository is on fine-tuning the GPT-Neo model for CQA tasks.
+This project structure describes an approach to fine-tuning GPT Neo model via a three-staged process that incorporates Supervised Fine-Tuning (SFT), Reward Model Training, and Reinforcement Learning from Human Feedback (RLHF). The repository consists of several folders, each representing a particular stage or functionality of the model. The structure is designed to allow easy training and testing with the ability to modify different configurations and use different datasets.
 
-Repository Structure:
-The repository is organized into several directories to make it easy for users to navigate and find the relevant code and resources. The directories include:
+The project supports multi-GPU training, allowing you to leverage multiple graphics cards to significantly speed up the model training process using PyTorch-Lightning framework.
 
-data: This directory contains the data used for training and testing the CQA model.
+The project is structured as follows:
+- **sft**: the SFT model, with its configuration files, data, and models.
+- **reward_model**: contains the reward model with two different types of models - classification and regression.
+- **rlhf**: the RLHF model, with its configuration files, data, reward pipelines, and training utilities.
 
-notebooks: This directory contains Jupyter notebooks that explain the CQA and RLHF methods and demonstrate how to use the code.
+## Usage
+### Supervised Fine-Tuning (sft)
 
-sft: This directory contains the fine-tuning part of the GPT-Neo model. This is the most important directory for users who want to fine-tune the model on their own data.
+The **`sft`** folder contains the materials for the Supervised Fine-Tuning stage. You can modify the model's configurations in the 'configs' folder, include your datasets in the 'data' folder, and store or retrieve trained models in the 'models' folder.
+
+Training awailable via next commands:
+```
+cd sft
+python train_sft.py --config_file \configs\trainer_config.yaml
+```
+
+Testing sft and rlhf model available via next commands:
+```
+cd sft
+python test_sft.py --config_file \configs\test_config.yaml
+```
+
+### Reward Model Training (reward_model)
+
+This folder holds the reward model that is either based on contrast classification or sumple regression according to scaled scores. Both these models have their respective configuration, data, and model folders.
+
+For train regression model:
+```
+cd reward_model/regression
+python train_reward.py --config_file \configs\trainer_config.yaml
+```
+For test regression model:
+```
+cd reward_model/regression
+python test_reward.py --config_file \configs\test_config.yaml
+```
+For classification model:
+```
+cd reward_model/classification
+python train_reward.py --config_file \configs\trainer_config.yaml
+```
+
+### Reinforcement Learning from Human Feedback (rlhf)
+
+The **rlhf** folder contains the RLHF model. Here, you can modify the RLHF model's configurations in the 'configs' folder, store your datasets in the 'data' folder, build or modify reward pipelines in the 'reward_pipelines' folder, and access the training utilities in the 'training_utils' folder.
+
+```
+cd rlhf
+python train_ppo.py --config configs/trainer_config.yaml
+```
+
+## Requirements
+The project requires Python 3.8+, as well as several Python libraries. For a full list of these libraries and their respective versions, please refer to the 'requirements.txt' files at each stage directory.
+
+## Acknowledgements
+Appreciation to the original authors and contributors of the GPT Neo model. This work wouldn't have been possible without their significant contributions to the field of Machine Learning.
