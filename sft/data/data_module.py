@@ -28,7 +28,7 @@ class QADataModule(pl.LightningDataModule):
             self.test_ds = prepare_inference(
                 self.hparams.data_dir,
                 self.tokenizer,
-                max_length=self.hparams.max_length,
+                max_prompt_length=self.hparams.max_prompt_length,
                 split=self.hparams.split,
                 padding_side=self.hparams.padding_side,
                 padding=self.hparams.padding,

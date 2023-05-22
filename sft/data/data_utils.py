@@ -46,7 +46,7 @@ def prepare_train(
 def prepare_inference(data_file_path,
                       tokenizer,
                       split,
-                      max_length,
+                      max_prompt_length,
                       padding_side,
                       padding,
                       truncate_promt):
@@ -56,7 +56,7 @@ def prepare_inference(data_file_path,
 
         if truncate_promt:
             q_toks = tokenizer.encode(examples['Question'])
-            q_toks = q_toks[: max_length-7]
+            q_toks = q_toks[: max_prompt_length-7]
             tmp = tokenizer.decode(q_toks).strip()
         else:
             tmp = examples['Question']
@@ -64,7 +64,7 @@ def prepare_inference(data_file_path,
         tmp = 'Question: ' + tmp + "\nAnswer:"
 
         tokenized_dict = tokenizer(
-            tmp, padding=padding, max_length=max_length, truncation=True)
+            tmp, padding=padding, max_length=max_prompt_length, truncation=True)
 
         return tokenized_dict
 

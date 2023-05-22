@@ -1,7 +1,7 @@
 cuda: true
 data:
   data_dir: /kaggle/input/python-qa-api-usage/1.0-data-div-ans-sep-api-usage.json
-  max_length: 512
+  max_prompt_length: 512
   padding: true
   padding_side: right
   split: test
@@ -18,7 +18,7 @@ test_params:
   do_compute_metrics: true
   log_file: /content/test-tuned-api_usage-answer_loss-bredogenerated-125M.csv
   save_steps: 100
-  test_model_path: /content/artifacts/model-34980p14:v4/model.ckpt
+  test_model_path: null
   use_cache: true
 wandb:
   api: text
