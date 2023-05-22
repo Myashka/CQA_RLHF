@@ -6,8 +6,8 @@ import wandb
 import yaml
 from yaml import CLoader
 import click
-from models.reward_model import GPTneo_Regressor
-from data.data_module import QA_Reward_DataModule
+from models import GPTneo_Regressor
+from data import QA_Reward_DataModule
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks import LearningRateMonitor
 

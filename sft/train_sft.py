@@ -7,7 +7,7 @@ import yaml
 from yaml import CLoader
 import click
 from models import sft_model
-from data.data_module import QADataModule
+from data import QADataModule
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.strategies.deepspeed import DeepSpeedStrategy

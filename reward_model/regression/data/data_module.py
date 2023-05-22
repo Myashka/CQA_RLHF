@@ -1,6 +1,6 @@
 import pytorch_lightning as pl
 from transformers import AutoTokenizer
-from data.data_utils import prepare_train, prepare_dataloader_with_labels, prepare_inference
+from data_utils import prepare_train, prepare_dataloader_with_labels, prepare_inference
 
 
 class QA_Reward_DataModule(pl.LightningDataModule):

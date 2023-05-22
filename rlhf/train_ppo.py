@@ -7,10 +7,10 @@ tqdm.pandas()
 from transformers import AutoTokenizer
 from trl import PPOTrainer, PPOConfig, AutoModelForCausalLMWithValueHead, set_seed
 
-from data.data_utils import build_dataset, collator
-from training_utils.freeze import freeze_model
-from training_utils.checkpoint import save_checkpoint
-from reward_pipelines.regression_reward import Reward_pipeline
+from data import build_dataset, collator
+from training_utils import freeze_model
+from training_utils import save_checkpoint
+from reward_pipelines import Reward_pipeline
 
 import yaml
 from yaml import CLoader

@@ -15,7 +15,7 @@ import pandas as pd
 import os
 import gc
 
-from data.data_module import QADataModule
+from data import QADataModule
 
 
 def save_csv(data, columns, file_path):
