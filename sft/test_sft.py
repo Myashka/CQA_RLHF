@@ -15,7 +15,7 @@ from torchmetrics.text.rouge import ROUGEScore
 from tqdm.auto import tqdm
 from yaml import CLoader
 
-from data import QADataModule
+from sft.data import QADataModule
 
 
 def save_csv(data, columns, file_path):
@@ -32,7 +32,6 @@ def save_csv(data, columns, file_path):
 @click.command()
 @click.option("--config_file", default="config.yaml", help="Path to config YAML file")
 def main(config_file):
-
     with open(config_file, "r") as f:
         config = yaml.load(f, Loader=CLoader)
 
@@ -105,7 +104,6 @@ def main(config_file):
         test_sample.append(gen_answer)
 
         if config["test_params"]["do_compute_metrics"]:
-
             rouge_score = rouge(gen_answer, sample["Answer"])
             bleu_score = bleu(gen_answer, sample["Answer"])
 

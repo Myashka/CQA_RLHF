@@ -10,13 +10,12 @@ from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.strategies.deepspeed import DeepSpeedStrategy
 from yaml import CLoader
 
-from data import QADataModule
+from sft.data import QADataModule
 
 
 @click.command()
 @click.option("--config_file", default="config.yaml", help="Path to config YAML file")
 def main(config_file):
-
     wandb.require("service")
 
     with open(config_file, "r") as f:

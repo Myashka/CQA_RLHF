@@ -5,7 +5,11 @@ from torch.utils.data import DataLoader
 
 
 def prepare_train(
-    data_file_path, tokenizer, splits, max_length=None, truncate_promt=True,
+    data_file_path,
+    tokenizer,
+    splits,
+    max_length=None,
+    truncate_promt=True,
 ):
     def promt_tokenize(examples):
         a_toks = tokenizer.encode(examples["Answer"])

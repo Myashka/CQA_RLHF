@@ -9,7 +9,7 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from yaml import CLoader
 
-from data import QA_Reward_DataModule
+from reward_model.classification.data import QA_Reward_DataModule
 
 
 @click.command()

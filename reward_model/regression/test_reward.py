@@ -12,7 +12,7 @@ from pytorch_lightning.loggers import WandbLogger
 from tqdm.auto import tqdm
 from yaml import CLoader
 
-from data import QA_Reward_DataModule
+from reward_model.regression.data import QA_Reward_DataModule
 
 
 def save_csv(data, columns, file_path):

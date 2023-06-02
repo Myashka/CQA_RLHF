@@ -14,13 +14,12 @@ from transformers import AutoTokenizer
 from trl import AutoModelForCausalLMWithValueHead, PPOConfig, PPOTrainer, set_seed
 from yaml import CLoader
 
-from data import build_dataset, collator
+from rlhf.data import build_dataset, collator
 
 
 @click.command()
 @click.option("--config_file", default="config.yaml", help="Path to config YAML file")
 def main(config_file):
-
     with open(config_file, "r") as f:
         args_config = yaml.load(f, Loader=CLoader)
 
