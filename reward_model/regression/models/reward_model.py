@@ -2,8 +2,11 @@ import pytorch_lightning as pl
 import torch
 from torch.nn import L1Loss
 from torchmetrics.classification import BinaryAccuracy
-from transformers import (AutoTokenizer, GPTNeoForSequenceClassification,
-                          get_linear_schedule_with_warmup)
+from transformers import (
+    AutoTokenizer,
+    GPTNeoForSequenceClassification,
+    get_linear_schedule_with_warmup,
+)
 
 
 class GPTneo_Regressor(pl.LightningModule):
@@ -25,8 +28,8 @@ class GPTneo_Regressor(pl.LightningModule):
 
         if self.hparams.get("do_compute_metrics"):
             self.val_acc = BinaryAccuracy()
-        
-        if self.hparams.get('mae_loss'):
+
+        if self.hparams.get("mae_loss"):
             self.loss_fnc = L1Loss()
 
         self.frozen = False
@@ -35,27 +38,28 @@ class GPTneo_Regressor(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         output = self.model(**batch)
         loss = output.loss
-        if self.hparams.get('mae_loss'):
-            loss = self.loss_fnc(output.logits.squeeze(), batch['labels'].squeeze())
+        if self.hparams.get("mae_loss"):
+            loss = self.loss_fnc(output.logits.squeeze(), batch["labels"].squeeze())
         self.log(
-            "train_loss",
-            loss,
-            logger=True,
-            on_step=True,
-            sync_dist=True,
+            "train_loss", loss, logger=True, on_step=True, sync_dist=True,
         )
 
         preds = (output.logits >= 0).int()
-        y = (batch['labels'] >= 0).int()
-        return {'loss': loss, 'preds': preds, 'target': y}
+        y = (batch["labels"] >= 0).int()
+        return {"loss": loss, "preds": preds, "target": y}
 
     def training_step_end(self, outputs):
 
-        outputs['preds'] = outputs['preds'].reshape((1, -1))[0]
-        outputs['target'] = outputs['target'].reshape((1, -1))[0]
-        self.train_acc(outputs['preds'], outputs['target'])
-        self.log('train_accuracy', self.train_acc,
-                 on_step=False, on_epoch=True, sync_dist=True)
+        outputs["preds"] = outputs["preds"].reshape((1, -1))[0]
+        outputs["target"] = outputs["target"].reshape((1, -1))[0]
+        self.train_acc(outputs["preds"], outputs["target"])
+        self.log(
+            "train_accuracy",
+            self.train_acc,
+            on_step=False,
+            on_epoch=True,
+            sync_dist=True,
+        )
 
     def validation_step(self, batch, batch_idx):
         output = self.model(**batch)
@@ -71,17 +75,22 @@ class GPTneo_Regressor(pl.LightningModule):
         )
 
         preds = (output.logits >= 0).int()
-        y = (batch['labels'] >= 0).int()
+        y = (batch["labels"] >= 0).int()
 
-        return {'loss': val_loss, 'preds': preds, 'target': y}
+        return {"loss": val_loss, "preds": preds, "target": y}
 
     def validation_step_end(self, outputs):
         if self.hparams.do_compute_metrics:
-            outputs['preds'] = outputs['preds'].reshape((1, -1))[0]
-            outputs['target'] = outputs['target'].reshape((1, -1))[0]
-            self.val_acc(outputs['preds'], outputs['target'])
-            self.log('val_accuracy', self.val_acc, on_step=False,
-                     on_epoch=True, sync_dist=True)
+            outputs["preds"] = outputs["preds"].reshape((1, -1))[0]
+            outputs["target"] = outputs["target"].reshape((1, -1))[0]
+            self.val_acc(outputs["preds"], outputs["target"])
+            self.log(
+                "val_accuracy",
+                self.val_acc,
+                on_step=False,
+                on_epoch=True,
+                sync_dist=True,
+            )
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
@@ -111,34 +120,37 @@ class GPTneo_Regressor(pl.LightningModule):
 
         lr_scheduler = get_linear_schedule_with_warmup(
             optimizer=optimizer,
-            num_warmup_steps=self.hparams.warmup_steps_per_cent *
-            self.trainer.estimated_stepping_batches,
+            num_warmup_steps=self.hparams.warmup_steps_per_cent
+            * self.trainer.estimated_stepping_batches,
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
-        return [optimizer], [{
-            'scheduler': lr_scheduler,
-            'interval': 'step',
-            'frequency': 1}]
-    
+        return (
+            [optimizer],
+            [{"scheduler": lr_scheduler, "interval": "step", "frequency": 1}],
+        )
+
     def freeze(self):
         for name, p in self.model.named_parameters():
             name = name.lower()
-            if 'transformer.h' in name and int(name.split('.')[2]) in self.hparams.layers_not_to_freeze:
+            if (
+                "transformer.h" in name
+                and int(name.split(".")[2]) in self.hparams.layers_not_to_freeze
+            ):
                 continue
-            if 'ln' in name or 'norm' in name:
+            if "ln" in name or "norm" in name:
                 p.requires_grad = not self.hparams.freeze_ln
-            elif 'wte' in name or 'wpe' in name:
+            elif "wte" in name or "wpe" in name:
                 p.requires_grad = not self.hparams.freeze_emb
-            elif 'mlp' in name:
+            elif "mlp" in name:
                 p.requires_grad = not self.hparams.freeze_ff
-            elif 'attn' in name:
+            elif "attn" in name:
                 p.requires_grad = not self.hparams.freeze_attn
             else:
                 p.requires_grad = not self.hparams.freeze_other
-            
+
         self.frozen = True
-        print('Model freezed')
-    
+        print("Model freezed")
+
     # def freeze(self) -> None:
     #     # freeze all layers, except the final classifier layers
     #     for n, p in self.model.named_parameters():

@@ -27,8 +27,7 @@ def main(config_file):
 
     dm = QA_Reward_DataModule(model_name=config["model_name"], **config["data"])
     regressor = GPTneo_Regressor(
-        model_name=config["model_name"],
-        **config["model_params"],
+        model_name=config["model_name"], **config["model_params"],
     )
     wandb_logger = WandbLogger(
         project=config["wandb"]["project_name"],
@@ -38,11 +37,10 @@ def main(config_file):
 
     wandb_logger.watch(regressor, log_graph=False)
     checkpoint_callback = ModelCheckpoint(
-        save_weights_only=True,
-        **config["trainer"]["checkpoint"]
+        save_weights_only=True, **config["trainer"]["checkpoint"]
     )
 
-    lr_monitor = LearningRateMonitor(logging_interval='step')
+    lr_monitor = LearningRateMonitor(logging_interval="step")
 
     trainer = pl.Trainer(
         logger=wandb_logger,
@@ -52,9 +50,7 @@ def main(config_file):
     )
 
     trainer.fit(
-        regressor,
-        datamodule=dm,
-        ckpt_path=config["trainer"]["ckpt_path"],
+        regressor, datamodule=dm, ckpt_path=config["trainer"]["ckpt_path"],
     )
 
     wandb.finish()

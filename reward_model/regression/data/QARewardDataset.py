@@ -8,12 +8,7 @@ from torch.utils.data import DataLoader, Dataset
 
 class QA_Reward_Dataset(Dataset):
     def __init__(
-        self,
-        file_name,
-        tokenizer,
-        split="train",
-        max_length=None,
-        padding=False,
+        self, file_name, tokenizer, split="train", max_length=None, padding=False,
     ):
         self.pairs = []
         with open(file_name, "r") as f:
@@ -30,7 +25,8 @@ class QA_Reward_Dataset(Dataset):
             self.max_length = 0
             for pair in self.pairs:
                 sample_length = len(
-                    self.tokenizer.encode("Question\n" + pair["Question"] + "\nAnswer:"+ pair["Answer"],
+                    self.tokenizer.encode(
+                        "Question\n" + pair["Question"] + "\nAnswer:" + pair["Answer"],
                         return_tensors="pt",
                     )[0]
                 )
@@ -57,5 +53,5 @@ class QA_Reward_Dataset(Dataset):
         return {
             "input_ids": tokenized_dict["input_ids"][0],
             "attention_mask": tokenized_dict["attention_mask"][0],
-            "labels": qa_pair['Score'],
+            "labels": qa_pair["Score"],
         }

@@ -1,19 +1,15 @@
 import pytorch_lightning as pl
-from data_utils import (prepare_dataloader_with_labels, prepare_inference,
-                        prepare_train)
+from data_utils import prepare_dataloader_with_labels, prepare_inference, prepare_train
 from transformers import AutoTokenizer
 
 
 class QA_Reward_DataModule(pl.LightningDataModule):
-    def __init__(
-        self, model_name, *args, **kwargs
-    ):
+    def __init__(self, model_name, *args, **kwargs):
         super().__init__()
         self.save_hyperparameters()
         self.pairs = []
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
-
 
     def setup(self, stage: str):
         # Assign train/val datasets for use in dataloaders
@@ -40,10 +36,22 @@ class QA_Reward_DataModule(pl.LightningDataModule):
 
     def train_dataloader(self):
         dataloader = prepare_dataloader_with_labels(
-            self.train_ds, self.tokenizer, self.hparams.batch_size, True, self.hparams.on_tpu, self.hparams.max_length)
+            self.train_ds,
+            self.tokenizer,
+            self.hparams.batch_size,
+            True,
+            self.hparams.on_tpu,
+            self.hparams.max_length,
+        )
         return dataloader
 
     def val_dataloader(self):
         dataloader = prepare_dataloader_with_labels(
-            self.val_ds, self.tokenizer, self.hparams.batch_size, False, self.hparams.on_tpu, self.hparams.max_length)
+            self.val_ds,
+            self.tokenizer,
+            self.hparams.batch_size,
+            False,
+            self.hparams.on_tpu,
+            self.hparams.max_length,
+        )
         return dataloader

@@ -1,13 +1,14 @@
 import pytorch_lightning as pl
-from data.data_utils import (prepare_dataloader_with_labels, prepare_inference,
-                             prepare_train)
+from data.data_utils import (
+    prepare_dataloader_with_labels,
+    prepare_inference,
+    prepare_train,
+)
 from transformers import AutoTokenizer
 
 
 class QADataModule(pl.LightningDataModule):
-    def __init__(
-        self, *args, **kwargs
-    ):
+    def __init__(self, *args, **kwargs):
         super().__init__()
         self.save_hyperparameters()
         self.tokenizer = AutoTokenizer.from_pretrained(self.hparams.model_name)
@@ -34,15 +35,26 @@ class QADataModule(pl.LightningDataModule):
                 padding_side=self.hparams.padding_side,
                 padding=self.hparams.padding,
                 truncate_promt=self.hparams.truncate_promt,
-
             )
 
     def train_dataloader(self):
         dataloader = prepare_dataloader_with_labels(
-            self.train_ds, self.tokenizer, self.hparams.batch_size, True, self.hparams.on_tpu, self.hparams.max_length)
+            self.train_ds,
+            self.tokenizer,
+            self.hparams.batch_size,
+            True,
+            self.hparams.on_tpu,
+            self.hparams.max_length,
+        )
         return dataloader
 
     def val_dataloader(self):
         dataloader = prepare_dataloader_with_labels(
-            self.val_ds, self.tokenizer, self.hparams.batch_size, False, self.hparams.on_tpu, self.hparams.max_length)
+            self.val_ds,
+            self.tokenizer,
+            self.hparams.batch_size,
+            False,
+            self.hparams.on_tpu,
+            self.hparams.max_length,
+        )
         return dataloader

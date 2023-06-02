@@ -28,12 +28,12 @@ def main(config_file):
 
     dm = QADataModule(model_name=config["model_name"], **config["data"])
     if config["trainer"]["ckpt_path"]:
-        llm = sft_model.LitLM.load_from_checkpoint(config["trainer"]["ckpt_path"], **config["model_params"])
+        llm = sft_model.LitLM.load_from_checkpoint(
+            config["trainer"]["ckpt_path"], **config["model_params"]
+        )
     else:
-        llm = sft_model.LitLM(
-        model_name=config["model_name"],
-        **config["model_params"])
-        
+        llm = sft_model.LitLM(model_name=config["model_name"], **config["model_params"])
+
     wandb_logger = WandbLogger(
         project=config["wandb"]["project_name"],
         log_model="all",
@@ -42,11 +42,11 @@ def main(config_file):
 
     wandb_logger.watch(llm, log_graph=False)
 
-    lr_monitor = LearningRateMonitor(logging_interval='step')
+    lr_monitor = LearningRateMonitor(logging_interval="step")
 
     checkpoint_callback = ModelCheckpoint(
-        monitor=config["trainer"]["checkpoint"]['log_obg'],
-        mode=config["trainer"]["checkpoint"]['mode'],
+        monitor=config["trainer"]["checkpoint"]["log_obg"],
+        mode=config["trainer"]["checkpoint"]["mode"],
     )
     # checkpoint_callback = ModelCheckpoint(
     #     every_n_train_steps=config["trainer"]["checkpoint"]["every_n_train_steps"],
@@ -54,7 +54,7 @@ def main(config_file):
     #     dirpath=config["trainer"]["checkpoint"]["dirpath"],
     # )
 
-    if config['trainer']['params']['accelerator'] == 'gpu':
+    if config["trainer"]["params"]["accelerator"] == "gpu":
         trainer = pl.Trainer(
             logger=wandb_logger,
             default_root_dir=os.getcwd(),

@@ -1,8 +1,11 @@
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-from transformers import (AutoTokenizer, GPTNeoForSequenceClassification,
-                          get_linear_schedule_with_warmup)
+from transformers import (
+    AutoTokenizer,
+    GPTNeoForSequenceClassification,
+    get_linear_schedule_with_warmup,
+)
 
 
 class GPTneo_Regressor(pl.LightningModule):
@@ -24,31 +27,38 @@ class GPTneo_Regressor(pl.LightningModule):
         self.freeze()
 
     def training_step(self, batch, batch_idx):
-        j_rewards = self.model(input_ids=batch['input_ids_j'], attention_mask=batch['attention_mask_j']).logits.squeeze()
-        k_rewards = self.model(input_ids=batch['input_ids_k'], attention_mask=batch['attention_mask_k']).logits.squeeze()
-        
+        j_rewards = self.model(
+            input_ids=batch["input_ids_j"], attention_mask=batch["attention_mask_j"]
+        ).logits.squeeze()
+        k_rewards = self.model(
+            input_ids=batch["input_ids_k"], attention_mask=batch["attention_mask_k"]
+        ).logits.squeeze()
+
         loss = -nn.functional.logsigmoid(j_rewards - k_rewards).mean()
 
         self.log(
-            "train_loss",
-            loss,
-            logger=True,
-            on_step=True,
-            sync_dist=True,
+            "train_loss", loss, logger=True, on_step=True, sync_dist=True,
         )
-        return {'loss': loss, 'j_rewards': j_rewards, 'k_rewards': k_rewards}
+        return {"loss": loss, "j_rewards": j_rewards, "k_rewards": k_rewards}
 
     def training_step_end(self, outputs):
-        outputs['j_rewards'] = outputs['j_rewards'].reshape((1, -1))[0]
-        outputs['k_rewards'] = outputs['k_rewards'].reshape((1, -1))[0]
-        train_acc = sum(outputs['j_rewards'] > outputs['k_rewards']).item()/len(outputs['k_rewards'])
-        self.log('train_accuracy', train_acc,
-                 on_step=True, on_epoch=False, sync_dist=True)
+        outputs["j_rewards"] = outputs["j_rewards"].reshape((1, -1))[0]
+        outputs["k_rewards"] = outputs["k_rewards"].reshape((1, -1))[0]
+        train_acc = sum(outputs["j_rewards"] > outputs["k_rewards"]).item() / len(
+            outputs["k_rewards"]
+        )
+        self.log(
+            "train_accuracy", train_acc, on_step=True, on_epoch=False, sync_dist=True
+        )
 
     def validation_step(self, batch, batch_idx):
-        j_rewards = self.model(input_ids=batch['input_ids_j'], attention_mask=batch['attention_mask_j']).logits.squeeze()
-        k_rewards = self.model(input_ids=batch['input_ids_k'], attention_mask=batch['attention_mask_k']).logits.squeeze()
-        
+        j_rewards = self.model(
+            input_ids=batch["input_ids_j"], attention_mask=batch["attention_mask_j"]
+        ).logits.squeeze()
+        k_rewards = self.model(
+            input_ids=batch["input_ids_k"], attention_mask=batch["attention_mask_k"]
+        ).logits.squeeze()
+
         val_loss = -nn.functional.logsigmoid(j_rewards - k_rewards).mean()
 
         self.log(
@@ -59,15 +69,16 @@ class GPTneo_Regressor(pl.LightningModule):
             on_epoch=True,
             sync_dist=True,
         )
-        return {'loss': val_loss, 'j_rewards': j_rewards, 'k_rewards': k_rewards}
+        return {"loss": val_loss, "j_rewards": j_rewards, "k_rewards": k_rewards}
 
     def validation_step_end(self, outputs):
-        outputs['j_rewards'] = outputs['j_rewards'].reshape((1, -1))[0]
-        outputs['k_rewards'] = outputs['k_rewards'].reshape((1, -1))[0]
-        val_acc = sum(outputs['j_rewards'] > outputs['k_rewards']).item()/len(outputs['k_rewards'])
+        outputs["j_rewards"] = outputs["j_rewards"].reshape((1, -1))[0]
+        outputs["k_rewards"] = outputs["k_rewards"].reshape((1, -1))[0]
+        val_acc = sum(outputs["j_rewards"] > outputs["k_rewards"]).item() / len(
+            outputs["k_rewards"]
+        )
 
-        self.log('val_accuracy', val_acc, on_step=False,
-                    on_epoch=True, sync_dist=True)
+        self.log("val_accuracy", val_acc, on_step=False, on_epoch=True, sync_dist=True)
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
@@ -97,30 +108,33 @@ class GPTneo_Regressor(pl.LightningModule):
 
         lr_scheduler = get_linear_schedule_with_warmup(
             optimizer=optimizer,
-            num_warmup_steps=self.hparams.warmup_steps_per_cent *
-            self.trainer.estimated_stepping_batches,
+            num_warmup_steps=self.hparams.warmup_steps_per_cent
+            * self.trainer.estimated_stepping_batches,
             num_training_steps=self.trainer.estimated_stepping_batches,
         )
-        return [optimizer], [{
-            'scheduler': lr_scheduler,
-            'interval': 'step',
-            'frequency': 1}]
-    
+        return (
+            [optimizer],
+            [{"scheduler": lr_scheduler, "interval": "step", "frequency": 1}],
+        )
+
     def freeze(self):
         for name, p in self.model.named_parameters():
             name = name.lower()
-            if 'transformer.h' in name and int(name.split('.')[2]) in self.hparams.layers_not_to_freeze:
+            if (
+                "transformer.h" in name
+                and int(name.split(".")[2]) in self.hparams.layers_not_to_freeze
+            ):
                 continue
-            if 'ln' in name or 'norm' in name:
+            if "ln" in name or "norm" in name:
                 p.requires_grad = not self.hparams.freeze_ln
-            elif 'wte' in name or 'wpe' in name:
+            elif "wte" in name or "wpe" in name:
                 p.requires_grad = not self.hparams.freeze_emb
-            elif 'mlp' in name:
+            elif "mlp" in name:
                 p.requires_grad = not self.hparams.freeze_ff
-            elif 'attn' in name:
+            elif "attn" in name:
                 p.requires_grad = not self.hparams.freeze_attn
             else:
                 p.requires_grad = not self.hparams.freeze_other
-            
+
         self.frozen = True
-        print('Model freezed')
+        print("Model freezed")
