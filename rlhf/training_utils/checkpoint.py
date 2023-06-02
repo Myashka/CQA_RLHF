@@ -1,7 +1,9 @@
-from os.path import join as opj
-import wandb
-import torch
 import os
+from os.path import join as opj
+
+import torch
+import wandb
+
 
 def save_checkpoint(model, run, global_epo, epoch, reward, checkpoint_dir, name, run_name):
     checkpoint_name = f'{name}-glob_epo_{global_epo}-reward_{round(reward.item(), 2)}-epoch_{epoch}'

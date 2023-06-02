@@ -1,22 +1,21 @@
 import torch
-from tqdm import tqdm
 import wandb
+from tqdm import tqdm
 
 tqdm.pandas()
 
-from transformers import AutoTokenizer
-from trl import PPOTrainer, PPOConfig, AutoModelForCausalLMWithValueHead, set_seed
-
-from data import build_dataset, collator
-from training_utils import freeze_model
-from training_utils import save_checkpoint
-from reward_pipelines import Reward_pipeline
-
-import yaml
-from yaml import CLoader
-import click
 import gc
 
+import click
+import yaml
+from reward_pipelines import Reward_pipeline
+from training_utils import freeze_model, save_checkpoint
+from transformers import AutoTokenizer
+from trl import (AutoModelForCausalLMWithValueHead, PPOConfig, PPOTrainer,
+                 set_seed)
+from yaml import CLoader
+
+from data import build_dataset, collator
 
 
 @click.command()

@@ -1,12 +1,9 @@
+import pytorch_lightning as pl
 import torch
 from torch.nn import L1Loss
-import pytorch_lightning as pl
-from transformers import (
-    GPTNeoForSequenceClassification,
-    AutoTokenizer,
-    get_linear_schedule_with_warmup,
-)
 from torchmetrics.classification import BinaryAccuracy
+from transformers import (AutoTokenizer, GPTNeoForSequenceClassification,
+                          get_linear_schedule_with_warmup)
 
 
 class GPTneo_Regressor(pl.LightningModule):

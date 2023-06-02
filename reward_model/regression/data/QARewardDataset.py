@@ -1,8 +1,9 @@
-import torch
-import numpy as np
-from torch.utils.data import Dataset, DataLoader
 # from data_utils import collate_batch
 import json
+
+import numpy as np
+import torch
+from torch.utils.data import DataLoader, Dataset
 
 
 class QA_Reward_Dataset(Dataset):

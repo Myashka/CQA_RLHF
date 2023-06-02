@@ -1,11 +1,8 @@
+import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
-from transformers import (
-    GPTNeoForSequenceClassification,
-    AutoTokenizer,
-    get_linear_schedule_with_warmup,
-)
+from transformers import (AutoTokenizer, GPTNeoForSequenceClassification,
+                          get_linear_schedule_with_warmup)
 
 
 class GPTneo_Regressor(pl.LightningModule):

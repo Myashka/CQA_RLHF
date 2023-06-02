@@ -1,15 +1,15 @@
 import os
-import pytorch_lightning as pl
-from pytorch_lightning.loggers import WandbLogger
-import wandb
 
-import yaml
-from yaml import CLoader
 import click
+import pytorch_lightning as pl
+import wandb
+import yaml
 from model import GPTneo_Regressor
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.loggers import WandbLogger
+from yaml import CLoader
+
 from data import QA_Reward_DataModule
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.callbacks import LearningRateMonitor
 
 
 @click.command()

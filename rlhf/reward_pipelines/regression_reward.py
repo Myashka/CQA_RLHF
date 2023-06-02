@@ -1,8 +1,10 @@
-import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-from torch.utils.data import DataLoader
-from transformers import DataCollatorWithPadding
 import gc
+
+import torch
+from torch.utils.data import DataLoader
+from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
+                          DataCollatorWithPadding)
+
 
 class Reward_pipeline:
     def __init__(self, model_name, accelerator):
